@@ -1,0 +1,174 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Bundle = {
+  id: string;
+  title: string;
+  occasion: string;
+  description: string;
+  price: number;
+  image: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export default function VendorDashboardPage() {
+  const [vendorId, setVendorId] = useState("");
+  const [vendorKey, setVendorKey] = useState("");
+  const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // new bundle form
+  const [title, setTitle] = useState("");
+  const [occasion, setOccasion] = useState("VACATION");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("19900");
+  const [image, setImage] = useState("/outfits/vac-1.jpg");
+
+  async function load() {
+    setLoading(true);
+    const r = await fetch("/api/vendor/bundles", {
+      headers: { "x-vendor-id": vendorId, "x-vendor-key": vendorKey },
+    });
+    const data = await r.json();
+    setBundles(data.bundles || []);
+    setLoading(false);
+  }
+
+  async function createBundle() {
+    setLoading(true);
+    const r = await fetch("/api/vendor/bundles", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-vendor-id": vendorId,
+        "x-vendor-key": vendorKey,
+      },
+      body: JSON.stringify({ title, occasion, description, price: Number(price), image }),
+    });
+    const data = await r.json();
+    if (!data.ok) alert(data.error || "Failed");
+    await load();
+    setLoading(false);
+  }
+
+  async function toggleActive(id: string, isActive: boolean) {
+    setLoading(true);
+    const r = await fetch("/api/vendor/bundles", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-vendor-id": vendorId,
+        "x-vendor-key": vendorKey,
+      },
+      body: JSON.stringify({ id, isActive: !isActive }),
+    });
+    const data = await r.json();
+    if (!data.ok) alert(data.error || "Failed");
+    await load();
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    // optional: keep empty
+  }, []);
+
+  return (
+    <div>
+      <h1>Vendor Dashboard</h1>
+      <p style={{ color: "#666" }}>Enter your Vendor ID + Vendor Key (from /vendor/apply). Admin must approve you first.</p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, maxWidth: 820 }}>
+        <input placeholder="Vendor ID" value={vendorId} onChange={(e) => setVendorId(e.target.value)} style={inp} />
+        <input placeholder="Vendor Key" value={vendorKey} onChange={(e) => setVendorKey(e.target.value)} style={inp} />
+        <button onClick={load} disabled={loading} style={btn}>
+          {loading ? "Loading…" : "Load Bundles"}
+        </button>
+      </div>
+
+      <hr style={{ margin: "18px 0" }} />
+
+      <h2>Add a Bundle</h2>
+      <div style={{ display: "grid", gap: 10, maxWidth: 820 }}>
+        <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} style={inp} />
+        <select value={occasion} onChange={(e) => setOccasion(e.target.value)} style={inp as any}>
+          <option value="VACATION">VACATION</option>
+          <option value="FORMAL">FORMAL</option>
+          <option value="CASUAL">CASUAL</option>
+          <option value="WEDDING">WEDDING</option>
+        </select>
+        <textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inp, minHeight: 90 }} />
+        <input placeholder="Price (cents)" value={price} onChange={(e) => setPrice(e.target.value)} style={inp} />
+        <input placeholder='Image path e.g. "/outfits/vac-1.jpg"' value={image} onChange={(e) => setImage(e.target.value)} style={inp} />
+        <button onClick={createBundle} disabled={loading} style={btn}>
+          {loading ? "Saving…" : "Create Bundle"}
+        </button>
+      </div>
+
+      <hr style={{ margin: "18px 0" }} />
+
+      <h2>Your Bundles</h2>
+      {bundles.length === 0 ? (
+        <p style={{ color: "#666" }}>No bundles yet.</p>
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          {bundles.map((b) => (
+            <div key={b.id} style={{ border: "1px solid #eee", background: "white", borderRadius: 14, padding: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: "#555" }}>{b.occasion}</div>
+                  <div style={{ fontWeight: 950 }}>{b.title}</div>
+                  <div style={{ color: "#666", fontSize: 13, marginTop: 4 }}>{b.description}</div>
+                  <div style={{ fontWeight: 950, marginTop: 6 }}>${(b.price / 100).toFixed(2)}</div>
+                  <div style={{ fontSize: 12, color: "#999", marginTop: 6 }}>
+                    {b.isActive ? "Active" : "Inactive"} • {new Date(b.createdAt).toLocaleString()}
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
+                  <button onClick={() => toggleActive(b.id, b.isActive)} disabled={loading} style={btnLight}>
+                    {b.isActive ? "Disable" : "Enable"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const inp: React.CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  border: "1px solid #ddd",
+};
+
+const btn: React.CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  border: "none",
+  background: "#111",
+  color: "white",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const btnLight: React.CSSProperties = {
+  padding: 10,
+  borderRadius: 12,
+  border: "1px solid #ddd",
+  background: "white",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+export default function VendorDashboardPage() {
+  return (
+    <main style={{ padding: 24 }}>
+      <h1>Vendor Dashboard ✅</h1>
+      <p>This page is working.</p>
+    </main>
+  );
+}

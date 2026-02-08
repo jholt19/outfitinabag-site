@@ -1,0 +1,113 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Occasion {
+  VACATION
+  FORMAL
+  CASUAL
+  WEDDING
+}
+
+model Bundle {
+  id       String @id @default(cuid())
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  title       String
+  occasion    Occasion
+  description String
+  price       Int // cents
+  image       String? // e.g. "/outfits/vac-1.jpg" or uploaded later
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  orderItems OrderItem[]
+
+  @@index([vendorId])
+  @@index([occasion])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  stripeSessionId String   @unique
+  stripePaymentId String?
+  email           String?
+  amountTotal     Int?
+  currency        String?
+  status          String?
+  createdAt       DateTime @default(now())
+
+  // Refund tracking (optional)
+  refundId     String?
+  refundStatus String?
+  refundedAt   DateTime?
+  refundAmount Int?
+  refundReason String?
+  refundNote   String?
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  title     String
+  quantity  Int
+  unitPrice Int?
+  image     String?
+  outfitId  String? // legacy (safe to keep)
+  bundleId  String? // NEW: link to Bundle if applicable
+  createdAt DateTime @default(now())
+
+  order  Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bundle Bundle? @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([bundleId])
+}
+
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  status    String   @default("pending") // pending | approved | rejected
+  apiKey    String?  @unique
+  createdAt DateTime @default(now())
+  bundles   Bundle[]
+  updatedAt DateTime @updatedAt
+
+  outfits VendorOutfit[]
+}
+
+model VendorOutfit {
+  id          String   @id @default(cuid())
+  vendorId    String
+  title       String
+  occasion    String
+  description String?
+  price       Int
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+}

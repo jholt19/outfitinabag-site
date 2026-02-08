@@ -1,0 +1,10 @@
+export default function VendorPage() {
+  return (
+    <main className="max-w-6xl mx-auto p-6">
+      <h1 className="text-4xl font-bold">Vendor Portal</h1>
+      <p className="mt-3 text-gray-600">
+        Next: vendors will upload outfit bundles and manage orders.
+      </p>
+    </main>
+  );
+}
