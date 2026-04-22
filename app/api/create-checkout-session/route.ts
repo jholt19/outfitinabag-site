@@ -2,24 +2,18 @@ import Stripe from "stripe";
 
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
-
 function getBaseUrl() {
-  // Production (Vercel)
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  // Vercel preview fallback
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  // Local fallback
   return "http://localhost:3000";
 }
 
 type IncomingCartItem = {
-  id?: string;
+  id?: string;          // bundleId
   title?: string;
   image?: string;
   qty?: number;
   quantity?: number;
-  // different code paths sometimes name price differently:
   price?: number;       // cents
   unitPrice?: number;   // cents
   amount?: number;      // cents
@@ -27,6 +21,16 @@ type IncomingCartItem = {
 
 export async function POST(req: Request) {
   try {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      return Response.json(
+        { ok: false, error: "Missing STRIPE_SECRET_KEY in env." },
+        { status: 500 }
+      );
+    }
+
+    const stripe = new Stripe(key, { apiVersion: "2024-06-20" });
+
     const body = await req.json().catch(() => null);
     const items: IncomingCartItem[] = body?.items || body?.cart || [];
 
@@ -40,7 +44,6 @@ export async function POST(req: Request) {
       const name = String(it.title || "Outfit Bundle");
       const qty = Number(it.qty ?? it.quantity ?? 1) || 1;
 
-      // ✅ IMPORTANT: find the unit amount (in cents)
       const centsRaw = it.price ?? it.unitPrice ?? it.amount;
       const unit_amount = Number(centsRaw);
 
@@ -48,13 +51,15 @@ export async function POST(req: Request) {
         throw new Error(`Bad price for "${name}". Got: ${String(centsRaw)}`);
       }
 
-      const img = it.image ? String(it.image) : undefined;
+      const img = it.image ? String(it.image) : "";
       const imageUrl =
         img && img.startsWith("http")
           ? img
           : img
           ? `${baseUrl}${img.startsWith("/") ? "" : "/"}${img}`
           : undefined;
+
+      const bundleId = String(it.id || "");
 
       return {
         quantity: qty,
@@ -65,7 +70,8 @@ export async function POST(req: Request) {
             name,
             images: imageUrl ? [imageUrl] : [],
             metadata: {
-              outfitId: String(it.id || ""),
+              outfitId: bundleId, // legacy
+              bundleId,           // ✅ used by /api/save-order
             },
           },
         },
@@ -82,6 +88,7 @@ export async function POST(req: Request) {
 
     return Response.json({ ok: true, url: session.url });
   } catch (err: any) {
+    console.error("create-checkout-session error:", err);
     return Response.json(
       { ok: false, error: err?.message || "Server error creating checkout session." },
       { status: 500 }
@@ -90,6 +97,5 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  // If someone visits the route in browser, avoid 405 confusion
   return Response.json({ ok: false, error: "Use POST" }, { status: 405 });
 }

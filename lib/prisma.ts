@@ -1,22 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
-}
-
-// ✅ Prefer UNPOOLED for runtime stability (especially in dev)
 const dbUrl =
-  process.env.DATABASE_URL_UNPOOLED ||
   process.env.DATABASE_URL ||
-  "";
+  "postgresql://localhost:5432/outfitinabag_local?schema=public";
+
+// Use globalThis (NOT global) to avoid "global is not defined"
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export const prisma =
-  global.prisma ||
+  globalForPrisma.prisma ??
   new PrismaClient({
-    datasources: {
-      db: { url: dbUrl },
-    },
+    datasources: { db: { url: dbUrl } },
   });
 
-if (process.env.NODE_ENV !== "production") global.prisma = prisma;
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

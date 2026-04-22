@@ -1,137 +1,219 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { CART_KEY, cartTotals, clearCart, readCart, removeItem, setQty, type CartItem } from "../../lib/cart";
+import { OUTFITS } from "@/lib/outfits";
+import Image from "next/image";
+import Link from "next/link";
+
+type BagItem = {
+  id: string;
+  title: string;
+  image: string;
+  occasion: string;
+  price: number;
+};
 
 export default function BagPage() {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<BagItem[]>([]);
+  const [justAdded, setJustAdded] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const load = () => setItems(readCart());
-    load();
+    const params = new URLSearchParams(window.location.search);
+    const bundleId = params.get("addBundleId");
 
-    const onStorage = () => load();
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    if (bundleId) {
+      const found = OUTFITS.find((o) => String(o.id) === String(bundleId));
+
+      if (found) {
+        setItems([found]);
+        setJustAdded(true);
+      }
+    }
   }, []);
 
-  const totals = useMemo(() => cartTotals(items), [items]);
+  const subtotal = useMemo(
+    () => items.reduce((acc, item) => acc + item.price, 0),
+    [items]
+  );
 
-  async function checkout() {
-    if (!items.length) return alert("Your bag is empty.");
+  async function handleCheckout() {
+    if (items.length === 0) return;
 
-    setLoading(true);
     try {
+      setLoading(true);
+
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          items: items.map((x) => ({
-            title: x.title,
-            price: x.price,
-            quantity: x.qty,
-            image: x.image,
-            outfitId: x.id,
+          items: items.map((item) => ({
+            id: item.id,
+            title: item.title,
+            image: item.image,
+            price: item.price,
+            qty: 1,
           })),
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Checkout failed");
+      const data = await res.json();
 
-      // Stripe returns a hosted checkout url
-      window.location.href = json.url;
-    } catch (e: any) {
-      alert(e?.message || "Checkout failed");
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Failed to start checkout.");
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      alert(err?.message || "Checkout failed.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div>
-      <h1 style={{ margin: 0 }}>Bag</h1>
-      <p style={{ marginTop: 6, color: "#666" }}>Review your outfits and checkout.</p>
+    <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
+      <h1 style={{ fontSize: 30, fontWeight: 900, color: "#111", margin: 0 }}>
+        Your Bag
+      </h1>
 
-      {!items.length ? (
-        <div style={{ marginTop: 14, border: "1px solid #eee", borderRadius: 16, background: "white", padding: 16 }}>
-          Your bag is empty.
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginTop: 14 }}>
-          {items.map((x) => (
-            <div key={x.id} style={{ display: "flex", gap: 12, border: "1px solid #eee", borderRadius: 16, background: "white", padding: 12 }}>
-              <div style={{ position: "relative", width: 120, height: 90, borderRadius: 12, overflow: "hidden", background: "#f3f3f3" }}>
-                <Image src={x.image} alt={x.title} fill style={{ objectFit: "cover" }} />
-              </div>
+      <p style={{ marginTop: 8, color: "#444", fontSize: 16 }}>
+        Review your outfit and checkout.
+      </p>
 
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: "#555" }}>{x.occasion}</div>
-                <div style={{ fontWeight: 950 }}>{x.title}</div>
-                <div style={{ color: "#666", fontSize: 13, marginTop: 4 }}>${(x.price / 100).toFixed(2)} each</div>
-
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
-                  <label style={{ fontSize: 13, color: "#555", fontWeight: 900 }}>Qty</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={x.qty}
-                    onChange={(e) => {
-                      const q = Math.max(1, Number(e.target.value || 1));
-                      setQty(x.id, q);
-                      setItems(readCart());
-                    }}
-                    style={{ width: 70, padding: 8, borderRadius: 10, border: "1px solid #ddd" }}
-                  />
-
-                  <button
-                    onClick={() => {
-                      removeItem(x.id);
-                      setItems(readCart());
-                    }}
-                    style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd", background: "white", fontWeight: 900, cursor: "pointer" }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ fontWeight: 950, alignSelf: "center" }}>
-                ${(x.price * x.qty / 100).toFixed(2)}
-              </div>
-            </div>
-          ))}
-
-          <div style={{ border: "1px solid #eee", borderRadius: 16, background: "white", padding: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 950 }}>
-              <span>Subtotal</span>
-              <span>${(totals.subtotal / 100).toFixed(2)}</span>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-              <button
-                onClick={() => {
-                  clearCart();
-                  setItems([]);
-                }}
-                style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid #ddd", background: "white", fontWeight: 950, cursor: "pointer" }}
-              >
-                Clear Bag
-              </button>
-
-              <button
-                onClick={checkout}
-                disabled={loading}
-                style={{ padding: "10px 12px", borderRadius: 12, border: "none", background: "#111", color: "white", fontWeight: 950, cursor: "pointer" }}
-              >
-                {loading ? "Starting Checkout..." : "Checkout"}
-              </button>
-            </div>
-          </div>
+      {justAdded && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: 16,
+            background: "#d1fae5",
+            border: "1px solid #10b981",
+            borderRadius: 12,
+            fontWeight: 900,
+            color: "#065f46",
+          }}
+        >
+          ✅ Full outfit added to your bag
         </div>
       )}
-    </div>
+
+      {items.length === 0 ? (
+        <div style={{ marginTop: 24 }}>
+          <p style={{ color: "#444", fontSize: 16 }}>Your bag is empty.</p>
+          <Link href="/outfits" style={{ fontWeight: 900, color: "#111" }}>
+            Browse outfits →
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div style={{ marginTop: 24 }}>
+            {items.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  border: "1px solid #e5e5e5",
+                  borderRadius: 14,
+                  padding: 14,
+                  marginBottom: 14,
+                  background: "white",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div
+                  style={{
+                    position: "relative",
+                    width: 110,
+                    height: 110,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    style={{ objectFit: "cover", borderRadius: 12 }}
+                  />
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      fontSize: 18,
+                      color: "#111",
+                    }}
+                  >
+                    {item.title}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "#666",
+                      marginTop: 4,
+                    }}
+                  >
+                    Full Outfit • {item.occasion}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontWeight: 900,
+                      fontSize: 16,
+                      color: "#111",
+                    }}
+                  >
+                    ${(item.price / 100).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              marginTop: 24,
+              borderTop: "1px solid #eee",
+              paddingTop: 20,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 900,
+                color: "#111",
+              }}
+            >
+              Subtotal: ${(subtotal / 100).toFixed(2)}
+            </div>
+
+            <button
+              onClick={handleCheckout}
+              disabled={loading}
+              style={{
+                marginTop: 18,
+                width: "100%",
+                padding: "15px",
+                background: "#111",
+                color: "white",
+                fontWeight: 900,
+                borderRadius: 14,
+                border: "none",
+                fontSize: 16,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? "Starting Checkout..." : "Checkout"}
+            </button>
+          </div>
+        </>
+      )}
+    </main>
   );
 }

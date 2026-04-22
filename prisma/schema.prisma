@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,33 +8,23 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
-enum VendorStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum Occasion {
-  VACATION
-  FORMAL
-  CASUAL
-  WEDDING
-}
-
 model Bundle {
-  id       String @id @default(cuid())
-  vendorId String
-  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  id                 String      @id @default(cuid())
+  vendorId           String
+  title              String
+  occasion           Occasion
+  submittedForReview Boolean     @default(false)
+  description        String
+  tier               BundleTier?
+  price              Int
+  retailValue        Int?
+  image              String?
+  isActive           Boolean     @default(true)
+  published          Boolean     @default(false)
+  isFeatured         Boolean     @default(false)
+  createdAt          DateTime    @default(now())
 
-  title       String
-  occasion    Occasion
-  description String
-  price       Int // cents
-  image       String? // e.g. "/outfits/vac-1.jpg" or uploaded later
-  isActive    Boolean  @default(true)
-
-  createdAt DateTime @default(now())
-
+  vendor     Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
 
   @@index([vendorId])
@@ -53,7 +41,6 @@ model Order {
   status          String?
   createdAt       DateTime @default(now())
 
-  // Refund tracking (optional)
   refundId     String?
   refundStatus String?
   refundedAt   DateTime?
@@ -61,7 +48,14 @@ model Order {
   refundReason String?
   refundNote   String?
 
+  payoutStatus String @default("PENDING")
+
   items OrderItem[]
+    gmvCents            Int    @default(0) // Gross Merchandise Value (order total)
+  platformFeeCents    Int    @default(0) // What OutfitInABag keeps
+  vendorTotalCents    Int    @default(0) // Sum of vendor payouts for this order
+  stripeFeeCents      Int    @default(0) // Optional estimate (or store from Stripe later)
+  netRevenueCents     Int    @default(0) // platformFee - stripeFee
 }
 
 model OrderItem {
@@ -71,28 +65,40 @@ model OrderItem {
   quantity  Int
   unitPrice Int?
   image     String?
-  outfitId  String? // legacy (safe to keep)
-  bundleId  String? // NEW: link to Bundle if applicable
+  outfitId  String?
+  bundleId  String?
   createdAt DateTime @default(now())
 
-  order  Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  bundle Bundle? @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+  // bundle (optional)
+  bundle Bundle? @relation(fields: [bundleId], references: [id])
+
+  // vendor payout tracking
+  vendorId           String
+vendor             Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+vendorPayoutCents  Int      @default(0)
+
+payoutStatus       String   @default("PENDING")
+paidAt             DateTime?
+  // parent order
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([bundleId])
+  @@index([vendorId])
 }
 
 model Vendor {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
-  status    String   @default("pending") // pending | approved | rejected
+  status    String   @default("pending")
   apiKey    String?  @unique
   createdAt DateTime @default(now())
-  bundles   Bundle[]
   updatedAt DateTime @updatedAt
 
-  outfits VendorOutfit[]
+  bundles    Bundle[]
+  outfits    VendorOutfit[]
+  orderItems OrderItem[] // ✅ needed for OrderItem.vendor relation
 }
 
 model VendorOutfit {
@@ -104,10 +110,31 @@ model VendorOutfit {
   price       Int
   image       String?
   isActive    Boolean  @default(true)
+  published   Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@index([vendorId])
+}
+
+enum BundleTier {
+  BASIC
+  PLUS
+  ELITE
+}
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Occasion {
+  VACATION
+  FORMAL
+  CASUAL
+  WEDDING
 }

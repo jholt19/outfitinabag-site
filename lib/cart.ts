@@ -1,9 +1,14 @@
 import type { Outfit } from "./outfits";
 
 export type CartItem = {
+  // legacy key (still used by older items)
   id: string;
+
+  // ✅ real DB bundle id when item is a Bundle
+  bundleId?: string;
+
   title: string;
-  price: number;
+  price: number; // cents
   image: string;
   occasion: string;
   qty: number;
@@ -30,20 +35,40 @@ export function writeCart(items: CartItem[]) {
   window.dispatchEvent(new Event("storage"));
 }
 
-export function addToBag(outfit: Outfit) {
+// Accept either a static Outfit or a DB Bundle-like item
+type Addable =
+  | Outfit
+  | {
+      id: string; // could be bundle id or legacy id
+      bundleId?: string; // ✅ real bundle id
+      title: string;
+      price: number;
+      image: string;
+      occasion: string;
+    };
+
+function keyOf(x: { id: string; bundleId?: string }) {
+  // If bundleId exists, use it as stable key (real DB id)
+  return x.bundleId || x.id;
+}
+
+export function addToBag(item: Addable) {
   const items = readCart();
-  const existing = items.find((x) => x.id === outfit.id);
+  const k = keyOf(item);
+
+  const existing = items.find((x) => keyOf(x) === k);
 
   const next = existing
-    ? items.map((x) => (x.id === outfit.id ? { ...x, qty: x.qty + 1 } : x))
+    ? items.map((x) => (keyOf(x) === k ? { ...x, qty: x.qty + 1 } : x))
     : [
         ...items,
         {
-          id: outfit.id,
-          title: outfit.title,
-          price: outfit.price,
-          image: outfit.image,
-          occasion: outfit.occasion,
+          id: item.id,
+          bundleId: (item as any).bundleId || undefined,
+          title: item.title,
+          price: item.price,
+          image: item.image,
+          occasion: item.occasion,
           qty: 1,
         },
       ];
@@ -51,17 +76,17 @@ export function addToBag(outfit: Outfit) {
   writeCart(next);
 }
 
-export function setQty(id: string, qty: number) {
+export function setQty(idOrKey: string, qty: number) {
   const items = readCart();
   const next = items
-    .map((x) => (x.id === id ? { ...x, qty } : x))
+    .map((x) => (keyOf(x) === idOrKey || x.id === idOrKey ? { ...x, qty } : x))
     .filter((x) => x.qty > 0);
   writeCart(next);
 }
 
-export function removeItem(id: string) {
+export function removeItem(idOrKey: string) {
   const items = readCart();
-  writeCart(items.filter((x) => x.id !== id));
+  writeCart(items.filter((x) => keyOf(x) !== idOrKey && x.id !== idOrKey));
 }
 
 export function clearCart() {

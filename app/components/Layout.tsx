@@ -2,129 +2,296 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
-const CART_KEY = "oia_cart_v1";
+type LayoutProps = {
+  children: React.ReactNode;
+};
 
-function countCartItems() {
-  if (typeof window === "undefined") return 0;
-  try {
-    const raw = localStorage.getItem(CART_KEY);
-    const items = raw ? JSON.parse(raw) : [];
-    return items.reduce((sum: number, x: any) => sum + (x.qty || 0), 0);
-  } catch {
-    return 0;
-  }
-}
+const publicLinks = [
+  { href: "/", label: "Home" },
+  { href: "/outfits", label: "Shop" },
+];
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  const [cartCount, setCartCount] = useState(0);
+const accountLinks = [
+  { href: "/orders", label: "My Orders" },
+];
 
-  useEffect(() => {
-    setCartCount(countCartItems());
+const vendorLinks = [
+  { href: "/vendors", label: "Vendors" },
+  { href: "/sell", label: "Vendor Apply" },
+  { href: "/vendor/dashboard", label: "Vendor Dashboard" },
+];
 
-    const onStorage = () => setCartCount(countCartItems());
-    window.addEventListener("storage", onStorage);
+const adminLinks = [
+  { href: "/admin", label: "Admin" },
+];
 
-    // helps update the count after "Add to bag" in the same tab
-    const id = setInterval(() => setCartCount(countCartItems()), 800);
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      clearInterval(id);
-    };
-  }, []);
+function NavLink({
+  href,
+  label,
+  pathname,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  pathname: string;
+  onClick?: () => void;
+}) {
+  const active = pathname === href;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fafafa" }}>
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          background: "white",
-          borderBottom: "1px solid #eee",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            padding: "14px 18px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-          }}
-        >
-          <Link href="/" style={{ textDecoration: "none", color: "#111" }}>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>
-              OutfitInABag
-              <span style={{ fontWeight: 700, color: "#888" }}>.com</span>
-            </div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
-              Complete outfits for every occasion
-            </div>
-          </Link>
-
-          <nav style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
-            <Link href="/" style={linkStyle}>
-              Home
-            </Link>
-            <Link href="/outfits" style={linkStyle}>
-              Outfits
-            </Link>
-            <Link href="/bag" style={linkStyle}>
-              Bag{cartCount ? ` (${cartCount})` : ""}
-            </Link>
-            <Link href="/my-orders" style={linkStyle}>
-              My Orders
-            </Link>
-
-            <span style={{ width: 1, height: 18, background: "#eee", margin: "0 6px" }} />
-
-            <Link href="/admin/dashboard" style={linkStyle}>
-              Admin
-            </Link>
-
-            <span style={{ width: 1, height: 18, background: "#eee", margin: "0 6px" }} />
-
-            <Link href="/vendors" style={linkStyle}>
-              Vendors
-            </Link>
-            <Link href="/vendor/apply" style={linkStyle}>
-              Vendor Apply
-            </Link>
-            <Link href="/vendor/dashboard" style={linkStyle}>
-              Vendor Dashboard
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "22px 18px" }}>
-        {children}
-      </main>
-
-      <footer style={{ borderTop: "1px solid #eee", marginTop: 30, background: "white" }}>
-        <div
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            padding: "18px",
-            color: "#666",
-            fontSize: 13,
-          }}
-        >
-          © {new Date().getFullYear()} OutfitInABag — Founded by Joshua &amp; Stacy Holt
-        </div>
-      </footer>
-    </div>
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`transition-colors duration-200 ${
+        active ? "text-black" : "text-neutral-600 hover:text-black"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 
-const linkStyle: React.CSSProperties = {
-  textDecoration: "none",
-  color: "#111",
-  fontWeight: 800,
-  fontSize: 14,
-};
+export default function Layout({ children }: LayoutProps) {
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [bagCount] = useState(1);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  return (
+    <div className="min-h-screen bg-[#f7f5f2] text-black">
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f7f5f2]/95 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="flex h-[76px] items-center justify-between">
+            {/* LOGO */}
+            <Link href="/" className="min-w-0">
+              <div className="text-[1.5rem] font-semibold tracking-[-0.05em] text-black">
+                OutfitInABag
+              </div>
+
+              <div className="hidden text-xs text-neutral-500 sm:block">
+                Curated outfit bundles for every occasion
+              </div>
+            </Link>
+
+            {/* DESKTOP NAV */}
+            <nav className="hidden items-center gap-8 md:flex">
+              {publicLinks.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  pathname={pathname}
+                />
+              ))}
+
+              <Link
+                href="/bag"
+                className="rounded-full border border-black px-4 py-2 text-sm font-medium transition hover:bg-black hover:text-white"
+              >
+                Bag ({bagCount})
+              </Link>
+
+              <div className="h-6 w-px bg-black/10" />
+
+              {accountLinks.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  pathname={pathname}
+                />
+              ))}
+
+              {vendorLinks.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  pathname={pathname}
+                />
+              ))}
+
+              {adminLinks.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  pathname={pathname}
+                />
+              ))}
+            </nav>
+
+            {/* MOBILE NAV */}
+            <div className="flex items-center gap-2 md:hidden">
+              <Link
+                href="/outfits"
+                className="rounded-full px-3 py-2 text-sm font-medium text-neutral-700"
+              >
+                Shop
+              </Link>
+
+              <Link
+                href="/bag"
+                className="rounded-full border border-black px-3 py-2 text-sm font-medium"
+              >
+                Bag ({bagCount})
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/15 bg-white shadow-sm"
+                aria-label="Open menu"
+              >
+                <div className="flex flex-col gap-1.5">
+                  <span className="block h-[1.5px] w-5 bg-black" />
+                  <span className="block h-[1.5px] w-5 bg-black" />
+                  <span className="block h-[1.5px] w-5 bg-black" />
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* MOBILE DRAWER */}
+      {menuOpen && (
+        <>
+          <button
+            className="fixed inset-0 z-50 bg-black/30 md:hidden"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Close menu overlay"
+          />
+
+          <aside className="fixed right-0 top-0 z-[60] flex h-full w-[84%] max-w-[360px] flex-col bg-white p-6 shadow-2xl md:hidden">
+            <div className="mb-8 flex items-start justify-between">
+              <div>
+                <div className="text-xl font-semibold tracking-[-0.03em]">
+                  OutfitInABag
+                </div>
+                <div className="mt-1 text-sm text-neutral-500">
+                  Curated outfit bundles
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-8 overflow-y-auto pb-8">
+              <section>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                  Shop
+                </h3>
+
+                <div className="space-y-4 text-lg">
+                  {publicLinks.map((item) => (
+                    <div key={item.href}>
+                      <NavLink
+                        href={item.href}
+                        label={item.label}
+                        pathname={pathname}
+                        onClick={() => setMenuOpen(false)}
+                      />
+                    </div>
+                  ))}
+
+                  <div>
+                    <NavLink
+                      href="/bag"
+                      label={`Bag (${bagCount})`}
+                      pathname={pathname}
+                      onClick={() => setMenuOpen(false)}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                  Account
+                </h3>
+
+                <div className="space-y-4 text-lg">
+                  {accountLinks.map((item) => (
+                    <div key={item.href}>
+                      <NavLink
+                        href={item.href}
+                        label={item.label}
+                        pathname={pathname}
+                        onClick={() => setMenuOpen(false)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                  Vendor
+                </h3>
+
+                <div className="space-y-4 text-lg">
+                  {vendorLinks.map((item) => (
+                    <div key={item.href}>
+                      <NavLink
+                        href={item.href}
+                        label={item.label}
+                        pathname={pathname}
+                        onClick={() => setMenuOpen(false)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                  Admin
+                </h3>
+
+                <div className="space-y-4 text-lg">
+                  {adminLinks.map((item) => (
+                    <div key={item.href}>
+                      <NavLink
+                        href={item.href}
+                        label={item.label}
+                        pathname={pathname}
+                        onClick={() => setMenuOpen(false)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </aside>
+        </>
+      )}
+
+      <main>{children}</main>
+    </div>
+  );
+}
