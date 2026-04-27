@@ -1,17 +1,18 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { BundleTier } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
-export async function updateBundleTier(formData: FormData) {
-  const id = formData.get("bundleId") as string;
-  const tier = (formData.get("tier") as string)?.trim() || null;
-
-  if (!id) return;
+export async function updateTier(id: string, tier: string | null) {
+  const cleanTier =
+    tier && Object.values(BundleTier).includes(tier as BundleTier)
+      ? (tier as BundleTier)
+      : null;
 
   await prisma.bundle.update({
     where: { id },
-    data: { tier: tier || null },
+    data: { tier: cleanTier },
   });
 
   revalidatePath("/admin/bundles");
