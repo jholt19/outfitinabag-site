@@ -50,12 +50,13 @@ model Order {
 
   payoutStatus String @default("PENDING")
 
+  gmvCents         Int @default(0)
+  platformFeeCents Int @default(0)
+  vendorTotalCents Int @default(0)
+  stripeFeeCents   Int @default(0)
+  netRevenueCents  Int @default(0)
+
   items OrderItem[]
-    gmvCents            Int    @default(0) // Gross Merchandise Value (order total)
-  platformFeeCents    Int    @default(0) // What OutfitInABag keeps
-  vendorTotalCents    Int    @default(0) // Sum of vendor payouts for this order
-  stripeFeeCents      Int    @default(0) // Optional estimate (or store from Stripe later)
-  netRevenueCents     Int    @default(0) // platformFee - stripeFee
 }
 
 model OrderItem {
@@ -69,18 +70,14 @@ model OrderItem {
   bundleId  String?
   createdAt DateTime @default(now())
 
-  // bundle (optional)
+  vendorId          String
+  vendorPayoutCents Int    @default(0)
+  payoutStatus      String @default("PENDING")
+  paidAt            DateTime?
+
   bundle Bundle? @relation(fields: [bundleId], references: [id])
-
-  // vendor payout tracking
-  vendorId           String
-vendor             Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-vendorPayoutCents  Int      @default(0)
-
-payoutStatus       String   @default("PENDING")
-paidAt             DateTime?
-  // parent order
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  order  Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([bundleId])
@@ -98,7 +95,7 @@ model Vendor {
 
   bundles    Bundle[]
   outfits    VendorOutfit[]
-  orderItems OrderItem[] // ✅ needed for OrderItem.vendor relation
+  orderItems OrderItem[]
 }
 
 model VendorOutfit {
@@ -118,6 +115,18 @@ model VendorOutfit {
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@index([vendorId])
+}
+
+model VendorApplication {
+  id           String   @id @default(cuid())
+  brandName    String
+  contactEmail String
+  website      String?
+  instagram    String?
+  products     String
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 enum BundleTier {
