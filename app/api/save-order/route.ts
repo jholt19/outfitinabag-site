@@ -1,11 +1,28 @@
-sing ecmascript source code failed
-  23 | }
-  24 |
-> 25 | export async function POST(req: Request) {
-     | ^^^^^^
-  26 |   try {
-  27 |     const body = await req.json().catch(() => null);
-  28 |     const session_id = body?.session_id;
-'import', and 'export' cannot be used outside of module code
-    at <unknown> (./app/api/save-order/route.ts:25:1)
-Error: Command "npm run vercel-build" exited with 1
+import { NextResponse } from "next/server";
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => null);
+    const session_id = body?.session_id;
+
+    if (!session_id) {
+      return NextResponse.json(
+        { error: "Missing session_id" },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      session_id,
+      message: "save-order route is working",
+    });
+  } catch (error) {
+    console.error("save-order POST error:", error);
+
+    return NextResponse.json(
+      { error: "Failed to save order" },
+      { status: 500 }
+    );
+  }
+}
