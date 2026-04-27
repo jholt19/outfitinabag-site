@@ -3,580 +3,262 @@ import Image from "next/image";
 
 export default function SellPage() {
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+    <main className="mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8">
       {/* HERO */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.1fr 1fr",
-          gap: 28,
-          alignItems: "center",
-          background: "linear-gradient(180deg,#fafafa 0%,#f5f5f5 100%)",
-          border: "1px solid #ececec",
-          borderRadius: 28,
-          padding: 32,
-        }}
-      >
+      <section className="grid items-center gap-8 rounded-[32px] border border-black/10 bg-[#f7f5f2] p-5 sm:p-7 lg:grid-cols-2 lg:p-10">
         <div>
-          <div
-            style={{
-              display: "inline-block",
-              background: "#111",
-              color: "white",
-              fontWeight: 900,
-              fontSize: 11,
-              letterSpacing: 0.6,
-              borderRadius: 999,
-              padding: "8px 14px",
-            }}
-          >
-            SELL ON OUTFITINABAG
+          <div className="inline-flex rounded-full bg-black px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white sm:text-[11px]">
+            Sell on OutfitInABag
           </div>
 
-          <h1
-            style={{
-              fontSize: 56,
-              fontWeight: 950,
-              lineHeight: 0.96,
-              letterSpacing: -1.5,
-              color: "#111",
-              margin: "16px 0 0",
-            }}
-          >
-            Sell your brand
-            <br />
-            through complete
-            <br />
-            outfits
+          <h1 className="mt-5 max-w-[11ch] text-[clamp(2.7rem,8vw,6rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
+            Put your brand inside complete outfits.
           </h1>
 
-          <p
-            style={{
-              marginTop: 18,
-              fontSize: 17,
-              lineHeight: 1.6,
-              color: "#222",
-              maxWidth: 560,
-            }}
-          >
-            OutfitInABag helps independent brands reach new customers by selling
-            complete outfits instead of single products. Customers shop the full
-            fit in one click, and you keep 80% of the sale.
+          <p className="mt-5 max-w-xl text-base leading-7 text-neutral-600 sm:text-lg">
+            OutfitInABag helps independent brands get discovered through curated
+            looks, styled occasions, and one-click outfit shopping.
           </p>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-              marginTop: 22,
-            }}
-          >
-            <a href="#apply" style={primaryBtn}>
-              APPLY AS A VENDOR
+          <div className="mt-8 flex flex-wrap gap-3">
+            <a
+              href="#apply"
+              className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              Apply as a Vendor
             </a>
-            <Link href="/outfits" style={secondaryBtn}>
-              VIEW EXAMPLE FITS
+
+            <Link
+              href="/outfits"
+              className="rounded-full border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-black"
+            >
+              View Example Fits
             </Link>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              flexWrap: "wrap",
-              marginTop: 24,
-            }}
-          >
-            <div style={miniStat}>
-              <div style={miniStatTop}>80%</div>
-              <div style={miniStatBottom}>vendor payout</div>
-            </div>
-            <div style={miniStat}>
-              <div style={miniStatTop}>1 click</div>
-              <div style={miniStatBottom}>full fit checkout</div>
-            </div>
-            <div style={miniStat}>
-              <div style={miniStatTop}>Featured</div>
-              <div style={miniStatBottom}>lookbook + homepage</div>
-            </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {[
+              ["80%", "vendor payout"],
+              ["1 click", "full outfit checkout"],
+              ["Featured", "lookbook visibility"],
+            ].map(([top, bottom]) => (
+              <div
+                key={top}
+                className="rounded-2xl border border-black/10 bg-white px-4 py-3"
+              >
+                <div className="text-xl font-semibold tracking-[-0.04em] text-black">
+                  {top}
+                </div>
+                <div className="mt-1 text-sm text-neutral-500">{bottom}</div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div
-          style={{
-            position: "relative",
-            height: 430,
-            borderRadius: 24,
-            overflow: "hidden",
-            border: "1px solid #e8e8e8",
-            background: "#ddd",
-          }}
-        >
-          <Image
-            src="/outfits/for-1.jpg"
-            alt="Brand feature preview"
-            fill
-            sizes="(max-width: 900px) 100vw, 45vw"
-            style={{ objectFit: "cover" }}
-            priority
-          />
-          <div
-            style={{
-              position: "absolute",
-              left: 16,
-              right: 16,
-              bottom: 16,
-              background: "rgba(255,255,255,0.95)",
-              borderRadius: 16,
-              padding: 14,
-              border: "1px solid rgba(0,0,0,0.06)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 900,
-                color: "#666",
-                letterSpacing: 0.5,
-              }}
-            >
-              FOUNDING BRANDS
+        <div className="relative">
+          <div className="relative h-[380px] overflow-hidden rounded-[28px] border border-black/10 bg-white sm:h-[460px] lg:h-[560px]">
+            <Image
+              src="/outfits/for-1.jpg"
+              alt="Brand feature preview"
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
+            />
+          </div>
+
+          <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-black/10 bg-white/95 p-4 shadow-lg backdrop-blur">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+              Founding Brands
             </div>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 900,
-                color: "#111",
-                marginTop: 4,
-              }}
-            >
+            <div className="mt-1 text-lg font-semibold tracking-[-0.03em] text-black">
               Get featured in curated fits
             </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: "#555",
-                marginTop: 4,
-                lineHeight: 1.45,
-              }}
-            >
-              Join early and get visibility across the homepage, lookbook, and
-              occasion-based collections.
+            <div className="mt-1 text-sm leading-6 text-neutral-600">
+              Early brands can appear across homepage, lookbook, and occasion
+              collections.
             </div>
           </div>
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section style={sectionWrap}>
-        <div style={sectionEyebrow}>HOW IT WORKS</div>
-        <h2 style={sectionTitle}>A simple 3-step flow</h2>
+      <section className="mt-14">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+          How It Works
+        </div>
+        <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
+          A simple vendor flow
+        </h2>
 
-        <div style={threeGrid}>
-          <div style={infoCard}>
-            <div style={stepNumber}>01</div>
-            <div style={infoTitle}>Apply and share your brand</div>
-            <div style={infoText}>
-              Tell us about your products, audience, and what kind of outfits
-              your brand fits best.
+        <div className="mt-5 grid gap-5 lg:grid-cols-3">
+          {[
+            [
+              "01",
+              "Apply",
+              "Tell us about your brand, products, audience, and style category.",
+            ],
+            [
+              "02",
+              "Get styled",
+              "Your products can be placed inside curated looks built around real occasions.",
+            ],
+            [
+              "03",
+              "Fulfill & earn",
+              "Customers buy the full fit. You fulfill your product and keep 80%.",
+            ],
+          ].map(([number, title, text]) => (
+            <div
+              key={number}
+              className="rounded-[24px] border border-black/10 bg-white p-6"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                {number}
+              </div>
+              <div className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-black">
+                {title}
+              </div>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">{text}</p>
             </div>
-          </div>
-
-          <div style={infoCard}>
-            <div style={stepNumber}>02</div>
-            <div style={infoTitle}>We build complete outfits</div>
-            <div style={infoText}>
-              Your items are featured in vendor-created or OutfitInABag-curated
-              looks built around real occasions and style moments.
-            </div>
-          </div>
-
-          <div style={infoCard}>
-            <div style={stepNumber}>03</div>
-            <div style={infoTitle}>You fulfill and get paid</div>
-            <div style={infoText}>
-              Customers buy the full fit in one checkout. You fulfill your item
-              and keep 80% of the sale.
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* WHY BRANDS JOIN */}
-      <section style={sectionWrap}>
-        <div style={sectionEyebrow}>WHY BRANDS JOIN</div>
-        <h2 style={sectionTitle}>More than another product listing</h2>
+      <section className="mt-14">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+          Why Brands Join
+        </div>
+        <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
+          More than another product listing
+        </h2>
 
-        <div style={twoGrid}>
-          <div style={featureBox}>
-            <div style={featureTitle}>Sell complete looks</div>
-            <div style={featureText}>
-              Your products sell as part of an outfit, not just as isolated
-              items. That gives your brand stronger context and better discovery.
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          {[
+            [
+              "Sell complete looks",
+              "Your pieces are shown with context, style, and occasion instead of sitting alone in a product grid.",
+            ],
+            [
+              "Reach new customers",
+              "Get discovered through curated outfit feeds, lookbooks, and occasion-based collections.",
+            ],
+            [
+              "Look premium on-platform",
+              "The site is built to feel editorial, clean, and elevated so your brand presentation stays strong.",
+            ],
+            [
+              "Keep your fulfillment flow",
+              "You do not need to hand over inventory. You continue fulfilling your products.",
+            ],
+          ].map(([title, text]) => (
+            <div
+              key={title}
+              className="rounded-[24px] border border-black/10 bg-white p-6"
+            >
+              <div className="text-xl font-semibold tracking-[-0.04em] text-black">
+                {title}
+              </div>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">{text}</p>
             </div>
-          </div>
-
-          <div style={featureBox}>
-            <div style={featureTitle}>Reach new customers</div>
-            <div style={featureText}>
-              Your items appear in curated fit feeds, lookbooks, and
-              occasion-based collections customers actually browse.
-            </div>
-          </div>
-
-          <div style={featureBox}>
-            <div style={featureTitle}>Look premium on-platform</div>
-            <div style={featureText}>
-              OutfitInABag is built to feel editorial and curated, giving your
-              brand a stronger presence than a plain marketplace listing.
-            </div>
-          </div>
-
-          <div style={featureBox}>
-            <div style={featureTitle}>Keep your own fulfillment flow</div>
-            <div style={featureText}>
-              You continue to fulfill your items. No need to hand over your
-              inventory just to join the platform.
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* ECONOMICS */}
-      <section
-        style={{
-          ...economicsSection,
-          gridTemplateColumns:
-            typeof window === "undefined" ? "1fr 1fr" : undefined,
-        }}
-      >
-        <div>
-          <div style={sectionEyebrow}>VENDOR EARNINGS</div>
-          <h2 style={sectionTitle}>Transparent economics</h2>
-          <p style={bodyText}>
+      <section className="mt-14 grid gap-6 rounded-[32px] border border-black/10 bg-[#f7f5f2] p-5 sm:p-7 lg:grid-cols-2 lg:p-8">
+        <div className="self-center">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+            Vendor Earnings
+          </div>
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
+            Transparent economics
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
             Customers buy complete outfits. The platform keeps 20%. Vendors keep
             80% of the sale based on the products included in the fit.
           </p>
         </div>
 
-        <div style={economicsCard}>
-          <div style={economicsRow}>
-            <span>Example outfit price</span>
-            <strong>$200.00</strong>
-          </div>
-          <div style={economicsRow}>
-            <span>Vendor payout (80%)</span>
-            <strong>$160.00</strong>
-          </div>
-          <div style={{ ...economicsRow, borderBottom: "none" }}>
-            <span>Platform fee (20%)</span>
-            <strong>$40.00</strong>
-          </div>
-        </div>
-      </section>
-
-      {/* FOUNDING BRAND PROGRAM */}
-      <section style={sectionWrap}>
-        <div style={sectionEyebrow}>FOUNDING BRAND PROGRAM</div>
-        <h2 style={sectionTitle}>Early brands get extra visibility</h2>
-
-        <div style={threeGrid}>
-          <div style={infoCard}>
-            <div style={infoTitle}>Homepage placement</div>
-            <div style={infoText}>
-              Early brands can be featured across the homepage, trending fits,
-              and occasion collections.
+        <div className="rounded-[24px] border border-black/10 bg-white p-5">
+          {[
+            ["Example outfit price", "$200.00"],
+            ["Vendor payout 80%", "$160.00"],
+            ["Platform fee 20%", "$40.00"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="flex items-center justify-between border-b border-black/10 py-4 last:border-b-0"
+            >
+              <span className="text-sm text-neutral-600">{label}</span>
+              <strong className="text-lg font-semibold text-black">
+                {value}
+              </strong>
             </div>
-          </div>
-
-          <div style={infoCard}>
-            <div style={infoTitle}>Lookbook spotlight</div>
-            <div style={infoText}>
-              We’ll feature selected products in editorial-style layouts to make
-              your brand feel premium and styled.
-            </div>
-          </div>
-
-          <div style={infoCard}>
-            <div style={infoTitle}>Launch visibility</div>
-            <div style={infoText}>
-              Founding brands will be positioned as early partners as the
-              marketplace grows.
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* APPLY */}
-      <section id="apply" style={applySection}>
+      <section
+        id="apply"
+        className="mt-14 grid gap-6 rounded-[32px] border border-black/10 bg-white p-5 sm:p-7 lg:grid-cols-[0.85fr_1.15fr] lg:p-8"
+      >
         <div>
-          <div style={sectionEyebrow}>APPLY</div>
-          <h2 style={sectionTitle}>Become a vendor</h2>
-          <p style={bodyText}>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+            Apply
+          </div>
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
+            Become a founding vendor
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
             Submit your brand information and we’ll review it for upcoming fit
             collections and launch features.
           </p>
         </div>
 
-        <form style={applyForm}>
-          <label style={label}>
-            Brand name
-            <input type="text" style={input} placeholder="Your brand name" />
-          </label>
+        <form className="grid gap-4 rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5">
+          {[
+            ["Brand name", "Your brand name", "text"],
+            ["Contact email", "name@brand.com", "email"],
+            ["Website", "https://yourbrand.com", "text"],
+            ["Instagram / social handle", "@yourbrand", "text"],
+          ].map(([label, placeholder, type]) => (
+            <label
+              key={label}
+              className="grid gap-2 text-sm font-semibold text-black"
+            >
+              {label}
+              <input
+                type={type}
+                placeholder={placeholder}
+                className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
+              />
+            </label>
+          ))}
 
-          <label style={label}>
-            Contact email
-            <input type="email" style={input} placeholder="name@brand.com" />
-          </label>
-
-          <label style={label}>
-            Website
-            <input
-              type="text"
-              style={input}
-              placeholder="https://yourbrand.com"
-            />
-          </label>
-
-          <label style={label}>
-            Instagram / social handle
-            <input type="text" style={input} placeholder="@yourbrand" />
-          </label>
-
-          <label style={label}>
+          <label className="grid gap-2 text-sm font-semibold text-black">
             What do you sell?
             <textarea
-              style={{ ...input, minHeight: 110, resize: "vertical" }}
               placeholder="Streetwear, casual basics, accessories, premium pieces, etc."
+              className="min-h-[120px] resize-y rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
             />
           </label>
 
-          <button type="button" style={primaryButtonReal}>
-            APPLY AS A VENDOR
+          <button
+            type="button"
+            className="mt-2 rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            Apply as a Vendor
           </button>
 
-          <div style={{ fontSize: 12, color: "#666", marginTop: 10 }}>
-            This can be connected to your real vendor application flow next.
-          </div>
+          <p className="text-xs leading-5 text-neutral-500">
+            This form is ready visually. Next, we can connect it to save vendor
+            applications.
+          </p>
         </form>
       </section>
     </main>
   );
 }
-
-const sectionWrap: React.CSSProperties = {
-  marginTop: 48,
-};
-
-const sectionEyebrow: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 900,
-  color: "#666",
-  letterSpacing: 0.7,
-};
-
-const sectionTitle: React.CSSProperties = {
-  fontSize: 34,
-  fontWeight: 950,
-  color: "#111",
-  margin: "6px 0 0",
-  letterSpacing: -0.8,
-};
-
-const bodyText: React.CSSProperties = {
-  color: "#222",
-  fontSize: 16,
-  lineHeight: 1.6,
-  marginTop: 14,
-  maxWidth: 580,
-};
-
-const threeGrid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 18,
-  marginTop: 18,
-};
-
-const twoGrid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, 1fr)",
-  gap: 18,
-  marginTop: 18,
-};
-
-const infoCard: React.CSSProperties = {
-  border: "1px solid #ececec",
-  borderRadius: 20,
-  background: "white",
-  padding: 20,
-};
-
-const stepNumber: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 900,
-  color: "#666",
-  letterSpacing: 0.5,
-};
-
-const infoTitle: React.CSSProperties = {
-  fontSize: 20,
-  fontWeight: 900,
-  color: "#111",
-  marginTop: 10,
-};
-
-const infoText: React.CSSProperties = {
-  fontSize: 14,
-  lineHeight: 1.6,
-  color: "#555",
-  marginTop: 8,
-};
-
-const featureBox: React.CSSProperties = {
-  border: "1px solid #ececec",
-  borderRadius: 20,
-  background: "#fafafa",
-  padding: 22,
-};
-
-const featureTitle: React.CSSProperties = {
-  fontSize: 20,
-  fontWeight: 900,
-  color: "#111",
-};
-
-const featureText: React.CSSProperties = {
-  fontSize: 14,
-  lineHeight: 1.6,
-  color: "#555",
-  marginTop: 8,
-};
-
-const economicsSection: React.CSSProperties = {
-  marginTop: 48,
-  border: "1px solid #ececec",
-  borderRadius: 28,
-  background: "linear-gradient(180deg,#fafafa 0%,#f5f5f5 100%)",
-  padding: 28,
-  display: "grid",
-  gap: 24,
-  alignItems: "center",
-};
-
-const economicsCard: React.CSSProperties = {
-  border: "1px solid #e5e5e5",
-  borderRadius: 20,
-  background: "white",
-  padding: 22,
-};
-
-const economicsRow: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 12,
-  padding: "14px 0",
-  borderBottom: "1px solid #f0f0f0",
-  color: "#111",
-};
-
-const applySection: React.CSSProperties = {
-  marginTop: 48,
-  border: "1px solid #ececec",
-  borderRadius: 28,
-  background: "#f8f8f8",
-  padding: 28,
-  display: "grid",
-  gridTemplateColumns: "0.9fr 1.1fr",
-  gap: 26,
-  alignItems: "start",
-};
-
-const applyForm: React.CSSProperties = {
-  border: "1px solid #e5e5e5",
-  borderRadius: 20,
-  background: "white",
-  padding: 22,
-  display: "grid",
-  gap: 14,
-};
-
-const label: React.CSSProperties = {
-  display: "grid",
-  gap: 8,
-  fontSize: 14,
-  fontWeight: 700,
-  color: "#111",
-};
-
-const input: React.CSSProperties = {
-  width: "100%",
-  border: "1px solid #ddd",
-  borderRadius: 14,
-  padding: "12px 14px",
-  fontSize: 14,
-  color: "#111",
-  background: "white",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-const miniStat: React.CSSProperties = {
-  border: "1px solid #e6e6e6",
-  background: "white",
-  borderRadius: 16,
-  padding: "12px 14px",
-  minWidth: 160,
-};
-
-const miniStatTop: React.CSSProperties = {
-  fontSize: 20,
-  fontWeight: 900,
-  color: "#111",
-};
-
-const miniStatBottom: React.CSSProperties = {
-  fontSize: 12,
-  color: "#666",
-  marginTop: 4,
-};
-
-const primaryBtn: React.CSSProperties = {
-  display: "inline-block",
-  padding: "13px 18px",
-  fontWeight: 900,
-  background: "#111",
-  color: "white",
-  border: "none",
-  borderRadius: 14,
-  cursor: "pointer",
-  fontSize: 14,
-  textDecoration: "none",
-};
-
-const secondaryBtn: React.CSSProperties = {
-  display: "inline-block",
-  padding: "13px 18px",
-  fontWeight: 900,
-  background: "white",
-  color: "#111",
-  border: "1px solid #d9d9d9",
-  borderRadius: 14,
-  cursor: "pointer",
-  fontSize: 14,
-  textDecoration: "none",
-};
-
-const primaryButtonReal: React.CSSProperties = {
-  padding: "14px 18px",
-  fontWeight: 900,
-  background: "#111",
-  color: "white",
-  border: "none",
-  borderRadius: 14,
-  cursor: "pointer",
-  fontSize: 14,
-  textDecoration: "none",
-};
