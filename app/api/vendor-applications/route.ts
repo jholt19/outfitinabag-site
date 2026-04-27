@@ -30,11 +30,14 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, application });
   } catch (error) {
-    console.error("Vendor application error:", error);
+   console.error("Vendor application error:", error);
 
-    return NextResponse.json(
-      { error: "Failed to submit vendor application." },
-      { status: 500 }
-    );
+return NextResponse.json(
+  {
+    error: "Failed to submit vendor application.",
+    details: error instanceof Error ? error.message : String(error),
+  },
+  { status: 500 }
+);
   }
 }
