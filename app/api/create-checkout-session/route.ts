@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const stripe = new Stripe(key, { apiVersion: "2024-06-20" });
+    const stripe = new Stripe(key, { apiVersion: "2026-01-28.clover" });
 
     const body = await req.json().catch(() => null);
     const items: IncomingCartItem[] = body?.items || body?.cart || [];
