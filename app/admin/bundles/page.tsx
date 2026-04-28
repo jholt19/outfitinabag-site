@@ -15,157 +15,220 @@ export default async function AdminBundlesPage() {
   });
 
   return (
-    <main style={{ padding: 24 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Admin • Bundles</h1>
-        <a href="/admin/bundles/new" style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd", background: "white", fontWeight: 900, textDecoration: "none", color: "#111" }}>+ New Bundle</a>
-        <span style={{ opacity: 0.7 }}>{bundles.length} total</span>
-      </div>
+    <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
+      <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+              Admin
+            </div>
 
-      <div style={{ marginTop: 16, border: "1px solid #e5e7eb", borderRadius: 12, overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1500 }}>
-          <thead>
-            <tr style={{ background: "#f9fafb", textAlign: "left" }}>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Title</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Occasion</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Tier</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Price</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Retail</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Submitted</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Published</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Featured</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Vendor</th>
-              <th style={{ padding: 12, borderBottom: "1px solid #e5e7eb" }}>Actions</th>
-            </tr>
-          </thead>
+            <h1 className="mt-5 text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
+              Bundle Review
+            </h1>
 
-          <tbody>
-            {bundles.map((b) => (
-              <tr key={b.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                <td style={{ padding: 12, fontWeight: 800 }}>{b.title}</td>
-                <td style={{ padding: 12 }}>{b.occasion}</td>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
+              Review vendor bundles, approve submissions, publish to storefront,
+              and feature top-performing fits.
+            </p>
+          </div>
 
-                <td style={{ padding: 12 }}>
-                  <form action={updateBundleTier} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div className="rounded-full border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black">
+            {bundles.length} Total Bundles
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-8 space-y-5">
+        {bundles.length === 0 ? (
+          <div className="rounded-[24px] border border-black/10 bg-white p-6">
+            No bundles found in the database.
+          </div>
+        ) : (
+          bundles.map((b) => (
+            <div
+              key={b.id}
+              className="rounded-[28px] border border-black/10 bg-white p-6 shadow-sm"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                    {b.occasion}
+                  </div>
+
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
+                    {b.title}
+                  </h2>
+
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Vendor: {b.vendor?.name ?? "—"}
+                  </p>
+
+                  <p className="mt-1 text-sm text-neutral-600">
+                    Price: ${(b.price / 100).toFixed(2)}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {b.submittedForReview ? (
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                      Submitted
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-black">
+                      Draft
+                    </span>
+                  )}
+
+                  {b.published && (
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                      Published
+                    </span>
+                  )}
+
+                  {b.isFeatured && (
+                    <span className="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-purple-700">
+                      Featured
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <form action={updateBundleTitle} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Title
+                  </label>
+
+                  <input
+                    name="title"
+                    defaultValue={b.title}
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Title
+                  </button>
+                </form>
+
+                <form action={updateBundleImage} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Image Path
+                  </label>
+
+                  <input
+                    name="image"
+                    defaultValue={b.image ?? ""}
+                    placeholder="/outfits/for-1.jpg"
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Image
+                  </button>
+                </form>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <form action={updateBundleTier} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Tier
+                  </label>
+
+                  <select
+                    name="tier"
+                    defaultValue={b.tier ?? ""}
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  >
+                    <option value="">Select Tier</option>
+                    <option value="BASIC">BASIC</option>
+                    <option value="PLUS">PLUS</option>
+                    <option value="ELITE">ELITE</option>
+                  </select>
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Tier
+                  </button>
+                </form>
+
+                <form action={updateBundleRetailValue} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Retail Value
+                  </label>
+
+                  <input
+                    name="retailValue"
+                    defaultValue={b.retailValue ?? ""}
+                    placeholder="249"
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Retail
+                  </button>
+                </form>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                {b.submittedForReview && !b.published && (
+                  <form action={approveBundle}>
                     <input type="hidden" name="bundleId" value={b.id} />
-                    <select
-                      name="tier"
-                      defaultValue={b.tier ?? ""}
-                      style={{
-                        padding: "6px 8px",
-                        borderRadius: 10,
-                        border: "1px solid #ddd",
-                        background: "white",
-                      }}
-                    >
-                      <option value="">—</option>
-                      <option value="BASIC">BASIC</option>
-                      <option value="PLUS">PLUS</option>
-                      <option value="ELITE">ELITE</option>
-                    </select>
+
                     <button
                       type="submit"
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        border: "1px solid #ddd",
-                        background: "white",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                      }}
+                      className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
                     >
-                      Save
+                      Approve Bundle
                     </button>
                   </form>
-                </td>
+                )}
 
-                <td style={{ padding: 12 }}>${(b.price / 100).toFixed(2)}</td>
-                <td style={{ padding: 12 }}>{b.retailValue ? `$${b.retailValue}` : "—"}</td>
-                <td style={{ padding: 12 }}>{b.submittedForReview ? "⏳" : "—" }</td>
-                <td style={{ padding: 12 }}>{b.published ? "✅" : "—"}</td>
-                <td style={{ padding: 12 }}>{b.isFeatured ? "⭐" : "—"}</td>
-                <td style={{ padding: 12 }}>{b.vendor?.name ?? "—"}</td>
+                <form action={toggleBundlePublished}>
+                  <input type="hidden" name="bundleId" value={b.id} />
 
-                <td style={{ padding: 12 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                      {b.submittedForReview && !b.published ? (
-                        <form action={approveBundle}>
-                          <input type="hidden" name="bundleId" value={b.id} />
-                          <button type="submit" style={{ padding: "6px 10px", borderRadius: 10, border: "none", background: "#111", color: "white", fontWeight: 900, cursor: "pointer" }}>
-                            Approve
-                          </button>
-                        </form>
-                      ) : null}
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black"
+                  >
+                    {b.published ? "Unpublish" : "Publish"}
+                  </button>
+                </form>
 
-                      {b.submittedForReview && !b.published ? (
-                        <form action={approveBundle}>
-                          <input type="hidden" name="bundleId" value={b.id} />
-                          <button type="submit" style={{ padding: "6px 10px", borderRadius: 10, border: "none", background: "#111", color: "white", fontWeight: 900, cursor: "pointer" }}>
-                            Approve
-                          </button>
-                        </form>
-                      ) : null}
+                <form action={toggleBundleFeatured}>
+                  <input type="hidden" name="bundleId" value={b.id} />
 
-                      <form action={toggleBundlePublished}>
-                        <input type="hidden" name="bundleId" value={b.id} />
-                        <button type="submit" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd", background: "white", fontWeight: 800, cursor: "pointer" }}>
-                          {b.published ? "Unpublish" : "Publish"}
-                        </button>
-                      </form>
-
-                      <form action={toggleBundleFeatured}>
-                        <input type="hidden" name="bundleId" value={b.id} />
-                        <button type="submit" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd", background: "white", fontWeight: 800, cursor: "pointer" }}>
-                          {b.isFeatured ? "Unfeature" : "Feature"}
-                        </button>
-                      </form>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                      <form action={updateBundleTitle} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <input type="hidden" name="bundleId" value={b.id} />
-                        <input name="title" defaultValue={b.title} style={{ width: 220, padding: "6px 8px", borderRadius: 10, border: "1px solid #ddd" }} />
-                        <button type="submit" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd", background: "white", fontWeight: 800, cursor: "pointer" }}>
-                          Save Title
-                        </button>
-                      </form>
-
-                      <form action={updateBundleImage} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <input type="hidden" name="bundleId" value={b.id} />
-                        <input name="image" defaultValue={b.image ?? ""} placeholder="Image path or URL" style={{ width: 280, padding: "6px 8px", borderRadius: 10, border: "1px solid #ddd" }} />
-                        <button type="submit" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd", background: "white", fontWeight: 800, cursor: "pointer" }}>
-                          Save Image
-                        </button>
-                      </form>
-
-                      <form action={updateBundleRetailValue} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <input type="hidden" name="bundleId" value={b.id} />
-                        <input name="retailValue" defaultValue={b.retailValue ?? ""} placeholder="Retail $ (e.g. 249)" style={{ width: 160, padding: "6px 8px", borderRadius: 10, border: "1px solid #ddd" }} />
-                        <button type="submit" style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid #ddd", background: "white", fontWeight: 800, cursor: "pointer" }}>
-                          Save Retail
-                        </button>
-                      </form>
-                    </div>
-
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      {b.image ? "Image set ✅" : "No image set"} • {b.retailValue ? "Retail set ✅" : "No retail value"} • {b.tier ? `Tier: ${b.tier}` : "No tier"}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            ))}
-
-            {bundles.length === 0 && (
-              <tr>
-                <td colSpan={9} style={{ padding: 16, opacity: 0.7 }}>
-                  No bundles found in the database.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black"
+                  >
+                    {b.isFeatured ? "Remove Feature" : "Feature Bundle"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))
+        )}
+      </section>
     </main>
   );
 }
