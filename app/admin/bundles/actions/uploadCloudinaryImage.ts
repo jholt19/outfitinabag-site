@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
@@ -14,17 +15,26 @@ export async function uploadCloudinaryImage(formData: FormData) {
   const bundleId = String(formData.get("bundleId") || "");
   const imageUrl = String(formData.get("imageUrl") || "").trim();
 
-  if (!bundleId) throw new Error("Missing bundle ID");
-  if (!imageUrl) throw new Error("Missing image URL");
+  try {
+    if (!bundleId) throw new Error("Missing bundle ID");
+    if (!imageUrl) throw new Error("Missing image URL");
 
-  const uploaded = await cloudinary.uploader.upload(imageUrl, {
-    folder: "outfitinabag/bundles",
-  });
+    const uploaded = await cloudinary.uploader.upload(imageUrl, {
+      folder: "outfitinabag/bundles",
+    });
 
-  await prisma.bundle.update({
-    where: { id: bundleId },
-    data: { image: uploaded.secure_url },
-  });
+    await prisma.bundle.update({
+      where: { id: bundleId },
+      data: {
+        image: uploaded.secure_url,
+      },
+    });
 
-  revalidatePath("/admin/bundles");
+    revalidatePath("/admin/bundles");
+  } catch (error) {
+    console.error("Cloudinary bundle upload failed:", error);
+    redirect("/admin/bundles?upload=failed");
+  }
+
+  redirect("/admin/bundles?upload=success");
 }
