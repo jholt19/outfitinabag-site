@@ -1,78 +1,19 @@
-"use client";
+import { prisma } from "@/lib/prisma";
+import { toggleBundleFeatured, toggleBundlePublished } from "./actions/toggle";
+import { updateBundleTitle } from "./actions/updateTitle";
+import { updateBundleImage } from "./actions/updateImage";
+import { updateBundleRetailValue } from "./actions/updateRetailValue";
+import { updateBundleTier } from "./actions/updateTier";
+import { approveBundle } from "./actions/approve";
+import { uploadCloudinaryImage } from "./actions/uploadCloudinaryImage";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
 
-type Bundle = {
-  id: string;
-  title: string;
-  occasion: string;
-  price: number;
-  retailValue: number | null;
-  image: string | null;
-  tier: string | null;
-  published: boolean;
-  isFeatured: boolean;
-  submittedForReview: boolean;
-  vendor?: {
-    name: string;
-  } | null;
-};
-
-export default function AdminBundlesPage() {
-  const [bundles, setBundles] = useState<Bundle[]>([]);
-
-  useEffect(() => {
-    async function load() {
-      const res = await fetch("/api/admin-bundles");
-      const data = await res.json();
-      setBundles(data || []);
-    }
-
-    load();
-  }, []);
-
-  async function handleCloudinaryUpload(bundleId: string) {
-    const imageUrl = prompt("Paste image URL to upload to Cloudinary");
-
-    if (!imageUrl) return;
-
-    const uploadRes = await fetch("/api/upload-image", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        imageUrl,
-      }),
-    });
-
-    const uploadData = await uploadRes.json();
-
-    if (!uploadRes.ok) {
-      alert(uploadData?.error || "Upload failed");
-      return;
-    }
-
-    const saveRes = await fetch("/api/update-bundle-image", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bundleId,
-        image: uploadData.secure_url,
-      }),
-    });
-
-    if (!saveRes.ok) {
-      alert("Cloudinary upload worked, but saving failed.");
-      return;
-    }
-
-    alert("Image uploaded and saved successfully!");
-
-    window.location.reload();
-  }
+export default async function AdminBundlesPage() {
+  const bundles = await prisma.bundle.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { vendor: true },
+  });
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
@@ -88,8 +29,8 @@ export default function AdminBundlesPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Review vendor bundles, upload premium images, and manage
-              publishing.
+              Review vendor bundles, upload premium images, publish to storefront,
+              and feature top-performing fits.
             </p>
           </div>
 
@@ -100,47 +41,227 @@ export default function AdminBundlesPage() {
       </section>
 
       <section className="mt-8 space-y-5">
-        {bundles.map((b) => (
-          <div
-            key={b.id}
-            className="rounded-[28px] border border-black/10 bg-white p-6 shadow-sm"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                  {b.occasion}
+        {bundles.length === 0 ? (
+          <div className="rounded-[24px] border border-black/10 bg-white p-6">
+            No bundles found in the database.
+          </div>
+        ) : (
+          bundles.map((b) => (
+            <div
+              key={b.id}
+              className="rounded-[28px] border border-black/10 bg-white p-6 shadow-sm"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                    {b.occasion}
+                  </div>
+
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
+                    {b.title}
+                  </h2>
+
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Vendor: {b.vendor?.name ?? "—"}
+                  </p>
+
+                  <p className="mt-1 text-sm text-neutral-600">
+                    Price: ${(b.price / 100).toFixed(2)}
+                  </p>
                 </div>
 
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
-                  {b.title}
-                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {b.submittedForReview ? (
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                      Submitted
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-black">
+                      Draft
+                    </span>
+                  )}
 
-                <p className="mt-2 text-sm text-neutral-600">
-                  Vendor: {b.vendor?.name ?? "—"}
-                </p>
+                  {b.published && (
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                      Published
+                    </span>
+                  )}
 
-                <p className="mt-1 text-sm text-neutral-600">
-                  Price: ${(b.price / 100).toFixed(2)}
-                </p>
+                  {b.isFeatured && (
+                    <span className="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-purple-700">
+                      Featured
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <button
-                onClick={() => handleCloudinaryUpload(b.id)}
-                className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              {b.image && (
+                <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4 text-sm break-all text-neutral-700">
+                  <strong>Current Image:</strong>
+                  <br />
+                  {b.image}
+                </div>
+              )}
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <form action={updateBundleTitle} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Title
+                  </label>
+
+                  <input
+                    name="title"
+                    defaultValue={b.title}
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Title
+                  </button>
+                </form>
+
+                <form action={updateBundleImage} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Manual Image URL / Path
+                  </label>
+
+                  <input
+                    name="image"
+                    defaultValue={b.image ?? ""}
+                    placeholder="/outfits/for-1.jpg or https://..."
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Image
+                  </button>
+                </form>
+              </div>
+
+              <form
+                action={uploadCloudinaryImage}
+                className="mt-6 grid gap-2 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4"
               >
-                Upload to Cloudinary
-              </button>
-            </div>
+                <input type="hidden" name="bundleId" value={b.id} />
 
-            {b.image && (
-              <div className="mt-4 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4 text-sm break-all">
-                Current Image:
-                <br />
-                {b.image}
+                <label className="text-sm font-semibold text-black">
+                  Upload Image to Cloudinary
+                </label>
+
+                <input
+                  name="imageUrl"
+                  required
+                  placeholder="Paste image URL here"
+                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm"
+                />
+
+                <button
+                  type="submit"
+                  className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Upload & Save Image
+                </button>
+              </form>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <form action={updateBundleTier} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Tier
+                  </label>
+
+                  <select
+                    name="tier"
+                    defaultValue={b.tier ?? ""}
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  >
+                    <option value="">Select Tier</option>
+                    <option value="BASIC">BASIC</option>
+                    <option value="PLUS">PLUS</option>
+                    <option value="ELITE">ELITE</option>
+                  </select>
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Tier
+                  </button>
+                </form>
+
+                <form action={updateBundleRetailValue} className="grid gap-2">
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <label className="text-sm font-semibold text-black">
+                    Retail Value
+                  </label>
+
+                  <input
+                    name="retailValue"
+                    defaultValue={b.retailValue ?? ""}
+                    placeholder="249"
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
+                  />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Save Retail
+                  </button>
+                </form>
               </div>
-            )}
-          </div>
-        ))}
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                {b.submittedForReview && !b.published && (
+                  <form action={approveBundle}>
+                    <input type="hidden" name="bundleId" value={b.id} />
+
+                    <button
+                      type="submit"
+                      className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                    >
+                      Approve Bundle
+                    </button>
+                  </form>
+                )}
+
+                <form action={toggleBundlePublished}>
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black"
+                  >
+                    {b.published ? "Unpublish" : "Publish"}
+                  </button>
+                </form>
+
+                <form action={toggleBundleFeatured}>
+                  <input type="hidden" name="bundleId" value={b.id} />
+
+                  <button
+                    type="submit"
+                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black"
+                  >
+                    {b.isFeatured ? "Remove Feature" : "Feature Bundle"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))
+        )}
       </section>
     </main>
   );
