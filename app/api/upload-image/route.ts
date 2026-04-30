@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
+  cloudinary_url: process.env.CLOUDINARY_URL,
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
@@ -9,13 +10,6 @@ cloudinary.config({
 
 export async function POST(req: Request) {
   try {
-    // 🔍 DEBUG — THIS IS THE IMPORTANT PART
-    console.log("CLOUDINARY ENV CHECK:", {
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret_exists: !!process.env.CLOUDINARY_API_SECRET,
-    });
-
     const body = await req.json();
     const imageUrl = String(body.imageUrl || "").trim();
 
@@ -36,12 +30,17 @@ export async function POST(req: Request) {
       public_id: uploaded.public_id,
     });
   } catch (error: any) {
-    console.error("Cloudinary upload error:", error);
-
     return NextResponse.json(
       {
         error: "Upload failed",
         details: error?.message || String(error),
+        envCheck: {
+          hasCloudinaryUrl: !!process.env.CLOUDINARY_URL,
+          hasCloudName: !!process.env.CLOUDINARY_CLOUD_NAME,
+          hasApiKey: !!process.env.CLOUDINARY_API_KEY,
+          hasApiSecret: !!process.env.CLOUDINARY_API_SECRET,
+          cloudName: process.env.CLOUDINARY_CLOUD_NAME || null,
+        },
       },
       { status: 500 }
     );
