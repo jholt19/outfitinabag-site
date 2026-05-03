@@ -6,7 +6,7 @@ import { updateBundleRetailValue } from "./actions/updateRetailValue";
 import { updateBundleTier } from "./actions/updateTier";
 import { approveBundle } from "./actions/approve";
 import { uploadCloudinaryImage } from "./actions/uploadCloudinaryImage";
-import Image from "next/image";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminBundlesPage() {
@@ -95,28 +95,41 @@ export default async function AdminBundlesPage() {
                 </div>
               </div>
 
+              {/* ✅ IMAGE PREVIEW FIX */}
               {b.image && (
-                <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4 text-sm break-all text-neutral-700">
-                  <strong>Current Image:</strong>
-                  <br />
-                  {b.image}
+                <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
+                  <div className="text-sm font-semibold text-black">
+                    Current Image
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <img
+                      src={b.image}
+                      alt={b.title}
+                      style={{
+                        width: "100%",
+                        height: "260px",
+                        objectFit: "cover",
+                        borderRadius: "16px",
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-3 break-all text-xs text-neutral-600">
+                    {b.image}
+                  </div>
                 </div>
               )}
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <form action={updateBundleTitle} className="grid gap-2">
                   <input type="hidden" name="bundleId" value={b.id} />
-
-                  <label className="text-sm font-semibold text-black">
-                    Title
-                  </label>
-
+                  <label className="text-sm font-semibold text-black">Title</label>
                   <input
                     name="title"
                     defaultValue={b.title}
                     className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
                   />
-
                   <button
                     type="submit"
                     className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
@@ -127,18 +140,15 @@ export default async function AdminBundlesPage() {
 
                 <form action={updateBundleImage} className="grid gap-2">
                   <input type="hidden" name="bundleId" value={b.id} />
-
                   <label className="text-sm font-semibold text-black">
                     Manual Image URL / Path
                   </label>
-
                   <input
                     name="image"
                     defaultValue={b.image ?? ""}
                     placeholder="/outfits/for-1.jpg or https://..."
                     className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
                   />
-
                   <button
                     type="submit"
                     className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
@@ -153,85 +163,28 @@ export default async function AdminBundlesPage() {
                 className="mt-6 grid gap-2 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4"
               >
                 <input type="hidden" name="bundleId" value={b.id} />
-
                 <label className="text-sm font-semibold text-black">
                   Upload Image to Cloudinary
                 </label>
-
                 <input
                   name="imageUrl"
                   required
                   placeholder="Paste image URL here"
                   className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm"
                 />
-
                 <button
                   type="submit"
-                  className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                  className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white"
                 >
                   Upload & Save Image
                 </button>
               </form>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <form action={updateBundleTier} className="grid gap-2">
-                  <input type="hidden" name="bundleId" value={b.id} />
-
-                  <label className="text-sm font-semibold text-black">
-                    Tier
-                  </label>
-
-                  <select
-                    name="tier"
-                    defaultValue={b.tier ?? ""}
-                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
-                  >
-                    <option value="">Select Tier</option>
-                    <option value="BASIC">BASIC</option>
-                    <option value="PLUS">PLUS</option>
-                    <option value="ELITE">ELITE</option>
-                  </select>
-
-                  <button
-                    type="submit"
-                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
-                  >
-                    Save Tier
-                  </button>
-                </form>
-
-                <form action={updateBundleRetailValue} className="grid gap-2">
-                  <input type="hidden" name="bundleId" value={b.id} />
-
-                  <label className="text-sm font-semibold text-black">
-                    Retail Value
-                  </label>
-
-                  <input
-                    name="retailValue"
-                    defaultValue={b.retailValue ?? ""}
-                    placeholder="249"
-                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
-                  />
-
-                  <button
-                    type="submit"
-                    className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
-                  >
-                    Save Retail
-                  </button>
-                </form>
-              </div>
-
               <div className="mt-6 flex flex-wrap gap-3">
                 {b.submittedForReview && !b.published && (
                   <form action={approveBundle}>
                     <input type="hidden" name="bundleId" value={b.id} />
-
-                    <button
-                      type="submit"
-                      className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                    >
+                    <button className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white">
                       Approve Bundle
                     </button>
                   </form>
@@ -239,22 +192,14 @@ export default async function AdminBundlesPage() {
 
                 <form action={toggleBundlePublished}>
                   <input type="hidden" name="bundleId" value={b.id} />
-
-                  <button
-                    type="submit"
-                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black"
-                  >
+                  <button className="rounded-full border border-black/15 px-5 py-3 text-sm">
                     {b.published ? "Unpublish" : "Publish"}
                   </button>
                 </form>
 
                 <form action={toggleBundleFeatured}>
                   <input type="hidden" name="bundleId" value={b.id} />
-
-                  <button
-                    type="submit"
-                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black"
-                  >
+                  <button className="rounded-full border border-black/15 px-5 py-3 text-sm">
                     {b.isFeatured ? "Remove Feature" : "Feature Bundle"}
                   </button>
                 </form>
