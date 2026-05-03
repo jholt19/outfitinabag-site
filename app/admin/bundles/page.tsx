@@ -6,7 +6,7 @@ import { updateBundleRetailValue } from "./actions/updateRetailValue";
 import { updateBundleTier } from "./actions/updateTier";
 import { approveBundle } from "./actions/approve";
 import { uploadCloudinaryImage } from "./actions/uploadCloudinaryImage";
-
+import Image from "next/image";
 export const dynamic = "force-dynamic";
 
 export default async function AdminBundlesPage() {
