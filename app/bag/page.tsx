@@ -61,10 +61,10 @@ export default async function BagPage({
         <div className="rounded-[28px] border border-black/10 bg-white p-5">
           {bundle.image ? (
             <img
-  src={bundle.image}
-  alt={bundle.title}
-  className="w-full h-[360px] rounded-2xl object-contain bg-[#f7f5f2] p-4"
-/>
+              src={bundle.image}
+              alt={bundle.title}
+              className="h-[360px] w-full rounded-2xl bg-[#f7f5f2] object-contain p-4"
+            />
           ) : (
             <div className="flex h-[360px] items-center justify-center rounded-2xl bg-[#f7f5f2] text-neutral-400">
               No image
@@ -117,6 +117,8 @@ export default async function BagPage({
           </div>
 
           <form action="/api/create-checkout-session" method="POST">
+            <input type="hidden" name="bundleId" value={bundle.id} />
+
             <button
               type="submit"
               className="mt-6 w-full rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
