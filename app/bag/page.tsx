@@ -1,21 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import Stripe from "stripe";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-
-function getBaseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  }
-
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-
-  return "http://localhost:3000";
-}
 
 export default async function BagPage({
   searchParams,
@@ -31,72 +17,6 @@ export default async function BagPage({
         include: { vendor: true },
       })
     : null;
-
-  async function checkoutBundle() {
-    "use server";
-
-    if (!bundleId) {
-      throw new Error("Missing bundle ID");
-    }
-
-    const checkoutBundle = await prisma.bundle.findUnique({
-      where: { id: bundleId },
-      include: { vendor: true },
-    });
-
-    if (!checkoutBundle) {
-      throw new Error("Bundle not found");
-    }
-
-    const key = process.env.STRIPE_SECRET_KEY;
-
-    if (!key) {
-      throw new Error("Missing STRIPE_SECRET_KEY");
-    }
-
-    const stripe = new Stripe(key, {
-      apiVersion: "2026-01-28.clover",
-    });
-
-    const baseUrl = getBaseUrl();
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: checkoutBundle.price,
-            product_data: {
-              name: checkoutBundle.title,
-              images:
-                checkoutBundle.image && checkoutBundle.image.startsWith("http")
-                  ? [checkoutBundle.image]
-                  : [],
-              metadata: {
-                bundleId: checkoutBundle.id,
-                vendorId: checkoutBundle.vendorId,
-              },
-            },
-          },
-        },
-      ],
-      metadata: {
-        bundleId: checkoutBundle.id,
-        vendorId: checkoutBundle.vendorId,
-      },
-      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/bag?addBundleId=${checkoutBundle.id}`,
-    });
-
-    if (!session.url) {
-      throw new Error("Stripe did not return a checkout URL");
-    }
-
-    redirect(session.url);
-  }
 
   if (!bundle) {
     return (
@@ -196,14 +116,12 @@ export default async function BagPage({
             </div>
           </div>
 
-          <form action={checkoutBundle}>
-            <button
-              type="submit"
-              className="mt-6 w-full rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              Checkout Securely
-            </button>
-          </form>
+          <Link
+            href={`/api/create-checkout-session?bundleId=${bundle.id}`}
+            className="mt-6 inline-flex w-full justify-center rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            Checkout Securely
+          </Link>
 
           <Link
             href="/outfits"
