@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       const rawProduct =
         typeof item.price?.product === "string" ? null : item.price?.product;
 
-      const product = isStripeProduct(rawProduct) ? rawProduct : null;
+     const product = isStripeProduct(rawProduct ?? null) ? rawProduct : null;
 
       const itemBundleId =
         String(product?.metadata?.bundleId || bundleId || "") || null;
