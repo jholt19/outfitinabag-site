@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,7 @@ function getBaseUrl() {
   return "http://localhost:3000";
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const key = process.env.STRIPE_SECRET_KEY;
 
@@ -25,20 +26,78 @@ export async function GET() {
       );
     }
 
+    const url = new URL(req.url);
+    const vendorId = url.searchParams.get("vendorId");
+
+    if (!vendorId) {
+      return Response.json(
+        { error: "Missing vendorId in URL." },
+        { status: 400 }
+      );
+    }
+
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: vendorId },
+    });
+
+    if (!vendor) {
+      return Response.json({ error: "Vendor not found." }, { status: 404 });
+    }
+
     const stripe = new Stripe(key, {
       apiVersion: "2026-01-28.clover",
     });
 
-    const account = await stripe.accounts.create({
-      type: "express",
-    });
+    let stripeAccountId = vendor.stripeAccountId;
+
+    if (!stripeAccountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        email: vendor.email,
+        business_profile: {
+          name: vendor.name,
+        },
+        metadata: {
+          vendorId: vendor.id,
+        },
+      });
+
+      stripeAccountId = account.id;
+
+      await prisma.vendor.update({
+        where: { id: vendor.id },
+        data: {
+          stripeAccountId,
+          stripeChargesEnabled: account.charges_enabled,
+          stripePayoutsEnabled: account.payouts_enabled,
+          stripeOnboardingDone:
+            account.details_submitted &&
+            account.charges_enabled &&
+            account.payouts_enabled,
+        },
+      });
+    } else {
+      const account = await stripe.accounts.retrieve(stripeAccountId);
+
+      await prisma.vendor.update({
+        where: { id: vendor.id },
+        data: {
+          stripeChargesEnabled: account.charges_enabled,
+          stripePayoutsEnabled: account.payouts_enabled,
+          stripeOnboardingDone:
+            account.details_submitted &&
+            account.charges_enabled &&
+            account.payouts_enabled,
+        },
+      });
+    }
 
     const baseUrl = getBaseUrl();
 
     const accountLink = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: `${baseUrl}/vendor/connect`,
-      return_url: `${baseUrl}/vendor/dashboard`,
+      account: stripeAccountId,
+      refresh_url: `${baseUrl}/vendor/connect?vendorId=${vendor.id}`,
+      return_url: `${baseUrl}/vendor/dashboard?vendorId=${vendor.id}&stripe=connected`,
       type: "account_onboarding",
     });
 
