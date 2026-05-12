@@ -71,10 +71,12 @@ export async function POST(req: Request) {
         : session.payment_intent?.id || null;
 
     const orderItems = lineItems.data.map((item) => {
-      const rawProduct =
-        typeof item.price?.product === "string" ? null : item.price?.product;
+     const rawProduct =
+  typeof item.price?.product === "string" ? null : item.price?.product ?? null;
 
-     const product = isStripeProduct(rawProduct ?? null) ? rawProduct : null;
+const product: Stripe.Product | null = isStripeProduct(rawProduct)
+  ? rawProduct
+  : null;
 
       const itemBundleId =
         String(product?.metadata?.bundleId || bundleId || "") || null;
