@@ -8,19 +8,23 @@ export default function VendorPicker({
   vendorId: string;
 }) {
   return (
-    <div style={{ marginTop: 14, maxWidth: 520 }}>
-      <label style={{ fontWeight: 900, display: "block", marginBottom: 6 }}>Vendor</label>
+    <div className="mt-6 max-w-xl rounded-[24px] border border-black/10 bg-white p-5">
+      <label className="mb-2 block text-sm font-semibold text-black">
+        Select Vendor
+      </label>
 
       <select
         value={vendorId || ""}
         onChange={(e) => {
           const id = e.currentTarget.value;
-          window.location.href = `/vendor/dashboard?vendorId=${encodeURIComponent(id)}`;
+          window.location.href = `/vendor/dashboard?vendorId=${encodeURIComponent(
+            id
+          )}`;
         }}
-        style={{ padding: 10, borderRadius: 10, border: "1px solid #ddd", width: "100%" }}
+        className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm font-medium text-black outline-none transition focus:border-black"
       >
         <option value="" disabled>
-          Select your vendor…
+          Select your vendor...
         </option>
 
         {vendors.map((v) => (
