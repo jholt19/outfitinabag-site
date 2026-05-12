@@ -50,11 +50,11 @@ model Order {
 
   payoutStatus String @default("PENDING")
 
-  gmvCents         Int @default(0)
-  platformFeeCents Int @default(0)
-  vendorTotalCents Int @default(0)
-  stripeFeeCents   Int @default(0)
-  netRevenueCents  Int @default(0)
+  gmvCents          Int @default(0)
+  platformFeeCents  Int @default(0)
+  vendorTotalCents  Int @default(0)
+  stripeFeeCents    Int @default(0)
+  netRevenueCents   Int @default(0)
 
   items OrderItem[]
 }
@@ -71,8 +71,8 @@ model OrderItem {
   createdAt DateTime @default(now())
 
   vendorId          String
-  vendorPayoutCents Int    @default(0)
-  payoutStatus      String @default("PENDING")
+  vendorPayoutCents Int      @default(0)
+  payoutStatus      String   @default("PENDING")
   paidAt            DateTime?
 
   bundle Bundle? @relation(fields: [bundleId], references: [id])
@@ -90,6 +90,12 @@ model Vendor {
   email     String   @unique
   status    String   @default("pending")
   apiKey    String?  @unique
+
+  stripeAccountId      String? @unique
+  stripeOnboardingDone Boolean @default(false)
+  stripeChargesEnabled Boolean @default(false)
+  stripePayoutsEnabled Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
