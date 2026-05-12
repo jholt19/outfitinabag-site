@@ -31,30 +31,27 @@ export default async function VendorConnectPage({
         </h1>
 
         <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-          Select your vendor account, then connect Stripe to receive payouts from OutfitInABag sales.
+          Select your vendor account, then connect Stripe to receive payouts.
         </p>
 
         <div className="mt-8 rounded-[24px] border border-black/10 bg-white p-5">
-          <label className="mb-2 block text-sm font-semibold text-black">
-            Vendor Account
-          </label>
+          <div className="text-sm font-semibold text-black">Vendor Account</div>
 
-          <select
-            defaultValue={vendorId}
-            onChange={undefined}
-            className="w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm font-medium text-black"
-          >
-            <option value="">Select vendor from dashboard first</option>
+          <div className="mt-4 grid gap-3">
             {vendors.map((vendor) => (
-              <option key={vendor.id} value={vendor.id}>
+              <Link
+                key={vendor.id}
+                href={`/vendor/connect?vendorId=${vendor.id}`}
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  vendor.id === vendorId
+                    ? "border-black bg-black text-white"
+                    : "border-black/10 bg-[#f7f5f2] text-black hover:border-black"
+                }`}
+              >
                 {vendor.name}
-              </option>
+              </Link>
             ))}
-          </select>
-
-          <p className="mt-3 text-xs text-neutral-500">
-            Open this page from your vendor dashboard so the correct vendor ID is attached.
-          </p>
+          </div>
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
@@ -66,12 +63,9 @@ export default async function VendorConnectPage({
               Connect Stripe Account
             </Link>
           ) : (
-            <Link
-              href="/vendor/dashboard"
-              className="inline-flex rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
-            >
+            <span className="inline-flex rounded-full bg-neutral-300 px-6 py-4 text-sm font-semibold text-neutral-600">
               Select Vendor First
-            </Link>
+            </span>
           )}
 
           <Link
@@ -84,29 +78,6 @@ export default async function VendorConnectPage({
           >
             Back to Dashboard
           </Link>
-        </div>
-      </section>
-
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
-        <div className="rounded-[24px] border border-black/10 bg-white p-5">
-          <div className="text-lg font-semibold text-black">Automatic payouts</div>
-          <p className="mt-2 text-sm leading-6 text-neutral-600">
-            Receive earnings directly to your bank account through Stripe.
-          </p>
-        </div>
-
-        <div className="rounded-[24px] border border-black/10 bg-white p-5">
-          <div className="text-lg font-semibold text-black">Secure onboarding</div>
-          <p className="mt-2 text-sm leading-6 text-neutral-600">
-            Stripe handles identity verification, banking, and compliance.
-          </p>
-        </div>
-
-        <div className="rounded-[24px] border border-black/10 bg-white p-5">
-          <div className="text-lg font-semibold text-black">Marketplace ready</div>
-          <p className="mt-2 text-sm leading-6 text-neutral-600">
-            OutfitInABag can automatically split payments between vendors and the platform.
-          </p>
         </div>
       </section>
     </main>
