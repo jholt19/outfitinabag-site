@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
+function isStripeProduct(
+  product: Stripe.Product | Stripe.DeletedProduct | null
+): product is Stripe.Product {
+  return !!product && !product.deleted;
+}
+
 export async function POST(req: Request) {
   try {
     const key = process.env.STRIPE_SECRET_KEY;
@@ -30,7 +36,7 @@ export async function POST(req: Request) {
     });
 
     const session = await stripe.checkout.sessions.retrieve(session_id, {
-      expand: ["line_items.data.price.product", "payment_intent"],
+      expand: ["payment_intent"],
     });
 
     const lineItems = await stripe.checkout.sessions.listLineItems(session_id, {
@@ -64,6 +70,40 @@ export async function POST(req: Request) {
         ? session.payment_intent
         : session.payment_intent?.id || null;
 
+    const orderItems = lineItems.data.map((item) => {
+      const rawProduct =
+        typeof item.price?.product === "string" ? null : item.price?.product;
+
+      const product = isStripeProduct(rawProduct) ? rawProduct : null;
+
+      const itemBundleId =
+        String(product?.metadata?.bundleId || bundleId || "") || null;
+
+      const itemVendorId = String(
+        product?.metadata?.vendorId || vendorId || ""
+      );
+
+      if (!itemVendorId) {
+        throw new Error("Missing vendorId for order item.");
+      }
+
+      const quantity = item.quantity || 1;
+      const unitPrice = item.price?.unit_amount || 0;
+      const total = unitPrice * quantity;
+
+      return {
+        title: item.description || product?.name || "Outfit Bundle",
+        quantity,
+        unitPrice,
+        image: product?.images?.[0] || null,
+        outfitId: itemBundleId,
+        bundleId: itemBundleId,
+        vendorId: itemVendorId,
+        vendorPayoutCents: Math.round(total * 0.8),
+        payoutStatus: "PENDING",
+      };
+    });
+
     const order = await prisma.order.create({
       data: {
         stripeSessionId: session.id,
@@ -80,38 +120,7 @@ export async function POST(req: Request) {
         netRevenueCents,
 
         items: {
-          create: lineItems.data.map((item) => {
-            const product =
-              typeof item.price?.product === "string"
-                ? null
-                : item.price?.product;
-
-            const itemBundleId =
-              String(product?.metadata?.bundleId || bundleId || "") || null;
-
-            const itemVendorId =
-              String(product?.metadata?.vendorId || vendorId || "");
-
-            if (!itemVendorId) {
-              throw new Error("Missing vendorId for order item.");
-            }
-
-            const quantity = item.quantity || 1;
-            const unitPrice = item.price?.unit_amount || 0;
-            const total = unitPrice * quantity;
-
-            return {
-              title: item.description || "Outfit Bundle",
-              quantity,
-              unitPrice,
-              image: product?.images?.[0] || null,
-              outfitId: itemBundleId,
-              bundleId: itemBundleId,
-              vendorId: itemVendorId,
-              vendorPayoutCents: Math.round(total * 0.8),
-              payoutStatus: "PENDING",
-            };
-          }),
+          create: orderItems,
         },
       },
       include: {
@@ -136,4 +145,5 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
 }
