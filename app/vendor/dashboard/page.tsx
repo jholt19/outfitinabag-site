@@ -9,11 +9,31 @@ function fmtCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+function statusBadge(label: string, active: boolean) {
+  return (
+    <div
+      className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
+        active
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-amber-200 bg-amber-50 text-amber-700"
+      }`}
+    >
+      {label} {active ? "✅" : "⏳"}
+    </div>
+  );
+}
+
 export default async function VendorDashboardPage(props: any) {
   const sp = await Promise.resolve(props.searchParams);
   const vendorId = (sp?.vendorId as string) ?? "";
 
-  const vendors = await prisma.vendor.findMany({ orderBy: { name: "asc" } });
+  const vendors = await prisma.vendor.findMany({
+    orderBy: { name: "asc" },
+  });
+
+  const selectedVendor = vendorId
+    ? vendors.find((v) => v.id === vendorId)
+    : null;
 
   const bundles = vendorId
     ? await prisma.bundle.findMany({
@@ -22,15 +42,15 @@ export default async function VendorDashboardPage(props: any) {
       })
     : [];
 
-  // ✅ Earnings (multi-vendor correct): read payoutStatus FROM OrderItem
   let earnings = { total: 0, pending: 0, paid: 0, count: 0 };
+  let recentOrders: any[] = [];
+
   if (vendorId) {
     const items = await prisma.orderItem.findMany({
       where: { vendorId },
-      select: {
-        vendorPayoutCents: true,
-        payoutStatus: true,
-      },
+      include: { order: true, bundle: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
     });
 
     let total = 0;
@@ -45,183 +65,297 @@ export default async function VendorDashboardPage(props: any) {
     }
 
     earnings = { total, pending, paid, count: items.length };
+    recentOrders = items;
   }
 
-  const vendorName = vendorId ? vendors.find((v) => v.id === vendorId)?.name : null;
+  const vendorName = selectedVendor?.name ?? null;
 
   return (
-    <main style={{ padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>
-          Vendor Dashboard {vendorName ? `• ${vendorName}` : ""}
-        </h1>
-
-        <Link
-          href={vendorId ? `/vendor/bundles/new?vendorId=${encodeURIComponent(vendorId)}` : "/vendor/bundles/new"}
-          style={{
-            padding: "8px 10px",
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            textDecoration: "none",
-            color: "#111",
-            fontWeight: 900,
-            background: "white",
-            whiteSpace: "nowrap",
-          }}
-        >
-          + New Bundle
-        </Link>
-<Link
-  href={vendorId ? `/vendor/orders?vendorId=${encodeURIComponent(vendorId)}` : "/vendor/orders"}
-  style={{
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid #ddd",
-    textDecoration: "none",
-    color: "#111",
-    fontWeight: 900,
-    background: "white",
-    whiteSpace: "nowrap",
-  }}
->
-  View Orders
-</Link>
-      </div>
-
-      <p style={{ opacity: 0.7, marginTop: 8 }}>
-        Create bundles here. When ready, submit for review so Admin can publish it.
-      </p>
-
-      <VendorPicker vendors={vendors} vendorId={vendorId} />
-
-      {/* Earnings card */}
-      {vendorId ? (
-        <section
-          style={{
-            marginTop: 16,
-            border: "1px solid #e5e7eb",
-            borderRadius: 12,
-            background: "white",
-            padding: 14,
-          }}
-        >
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Earnings</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 900 }}>TOTAL</div>
-              <div style={{ fontSize: 18, fontWeight: 950, marginTop: 6 }}>{fmtCents(earnings.total)}</div>
+    <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
+      <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+              Vendor Portal
             </div>
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 900 }}>PENDING</div>
-              <div style={{ fontSize: 18, fontWeight: 950, marginTop: 6 }}>{fmtCents(earnings.pending)}</div>
-            </div>
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 900 }}>PAID</div>
-              <div style={{ fontSize: 18, fontWeight: 950, marginTop: 6 }}>{fmtCents(earnings.paid)}</div>
-            </div>
+
+            <h1 className="mt-5 text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
+              {vendorName ? vendorName : "Vendor Dashboard"}
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
+              Manage bundles, monitor payouts, track sales, and grow your
+              storefront.
+            </p>
           </div>
 
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-            Based on {earnings.count} order items. (We’ll add payout export + Stripe Connect next.)
-          </div>
-        </section>
-      ) : null}
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={
+                vendorId
+                  ? `/vendor/orders?vendorId=${encodeURIComponent(vendorId)}`
+                  : "/vendor/orders"
+              }
+              className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+            >
+              View Orders
+            </Link>
 
-      <section style={{ marginTop: 22 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 900, margin: 0 }}>My Bundles</h2>
-          {vendorId ? <div style={{ opacity: 0.7 }}>{bundles.length} total</div> : null}
+            <Link
+              href={
+                vendorId
+                  ? `/vendor/connect?vendorId=${encodeURIComponent(vendorId)}`
+                  : "/vendor/connect"
+              }
+              className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+            >
+              Stripe Connect
+            </Link>
+
+            <Link
+              href={
+                vendorId
+                  ? `/vendor/bundles/new?vendorId=${encodeURIComponent(
+                      vendorId
+                    )}`
+                  : "/vendor/bundles/new"
+              }
+              className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              + New Bundle
+            </Link>
+          </div>
         </div>
 
-        {!vendorId ? (
-          <div style={{ marginTop: 12, padding: 14, border: "1px solid #e5e7eb", borderRadius: 12, background: "white" }}>
-            Select a vendor to view bundles.
-          </div>
-        ) : bundles.length === 0 ? (
-          <div style={{ marginTop: 12, padding: 14, border: "1px solid #e5e7eb", borderRadius: 12, background: "white" }}>
-            No bundles yet for this vendor.
-          </div>
-        ) : (
-          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-            {bundles.map((b) => {
-              const status = b.published
-                ? "Published ✅"
-                : b.submittedForReview
-                ? "Submitted (awaiting approval) ⏳"
-                : "Draft";
-
-              return (
-                <div
-                  key={b.id}
-                  style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    background: "white",
-                    padding: 14,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    alignItems: "center",
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 900 }}>{b.title}</div>
-                    <div style={{ opacity: 0.75, marginTop: 2, fontSize: 13 }}>
-                      {b.occasion} • ${((b.price ?? 0) / 100).toFixed(2)}
-                      {b.retailValue ? ` • Retail $${b.retailValue}` : ""}
-                      {b.tier ? ` • ${b.tier}` : ""}
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 12, opacity: 0.9 }}>
-                      Status: <b>{status}</b>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <Link
-                      href={`/vendor/bundles/new?vendorId=${encodeURIComponent(vendorId)}`}
-                      style={{
-                        padding: "8px 10px",
-                        borderRadius: 10,
-                        border: "1px solid #ddd",
-                        textDecoration: "none",
-                        color: "#111",
-                        fontWeight: 900,
-                        background: "white",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Create Another
-                    </Link>
-
-                    {!b.published && !b.submittedForReview ? (
-                      <form action={submitBundleForReview}>
-                        <input type="hidden" name="bundleId" value={b.id} />
-                        <input type="hidden" name="vendorId" value={vendorId} />
-                        <button
-                          type="submit"
-                          style={{
-                            padding: "8px 10px",
-                            borderRadius: 10,
-                            border: "none",
-                            background: "#111",
-                            color: "white",
-                            fontWeight: 900,
-                            cursor: "pointer",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Submit for review
-                        </button>
-                      </form>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <VendorPicker vendors={vendors} vendorId={vendorId} />
       </section>
+
+      {vendorId && selectedVendor ? (
+        <>
+          <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  Stripe Connect Status
+                </div>
+
+                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                  Payout Readiness
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-neutral-600">
+                  This shows whether this vendor can accept charges and receive
+                  payouts through Stripe Connect.
+                </p>
+              </div>
+
+              <Link
+                href={`/vendor/connect?vendorId=${encodeURIComponent(
+                  selectedVendor.id
+                )}`}
+                className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Manage Stripe
+              </Link>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {statusBadge("Account Connected", !!selectedVendor.stripeAccountId)}
+              {statusBadge("Onboarding Done", selectedVendor.stripeOnboardingDone)}
+              {statusBadge("Charges Enabled", selectedVendor.stripeChargesEnabled)}
+              {statusBadge("Payouts Enabled", selectedVendor.stripePayoutsEnabled)}
+            </div>
+
+            {selectedVendor.stripeAccountId ? (
+              <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  Stripe Account ID
+                </div>
+                <div className="mt-2 break-all font-mono text-sm text-black">
+                  {selectedVendor.stripeAccountId}
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="mt-8 grid gap-4 md:grid-cols-4">
+            <div className="rounded-[24px] border border-black/10 bg-white p-5">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                Total Revenue
+              </div>
+              <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                {fmtCents(earnings.total)}
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-black/10 bg-white p-5">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                Pending Payouts
+              </div>
+              <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                {fmtCents(earnings.pending)}
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-black/10 bg-white p-5">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                Paid Out
+              </div>
+              <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                {fmtCents(earnings.paid)}
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-black/10 bg-white p-5">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                Sales Count
+              </div>
+              <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                {earnings.count}
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_420px]">
+            <div className="rounded-[28px] border border-black/10 bg-white p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                    Bundles
+                  </div>
+
+                  <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                    My Bundles
+                  </h2>
+                </div>
+
+                <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
+                  {bundles.length} Total
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                {bundles.length === 0 ? (
+                  <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
+                    No bundles yet.
+                  </div>
+                ) : (
+                  bundles.map((b) => {
+                    const status = b.published
+                      ? "Published"
+                      : b.submittedForReview
+                      ? "Awaiting Review"
+                      : "Draft";
+
+                    return (
+                      <div
+                        key={b.id}
+                        className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                              {b.occasion}
+                            </div>
+
+                            <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
+                              {b.title}
+                            </h3>
+
+                            <p className="mt-2 text-sm text-neutral-600">
+                              Price:{" "}
+                              <strong>
+                                ${((b.price ?? 0) / 100).toFixed(2)}
+                              </strong>
+                            </p>
+
+                            <p className="mt-1 text-sm text-neutral-600">
+                              Status: <strong>{status}</strong>
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {!b.published && !b.submittedForReview ? (
+                              <form action={submitBundleForReview}>
+                                <input type="hidden" name="bundleId" value={b.id} />
+                                <input type="hidden" name="vendorId" value={vendorId} />
+
+                                <button
+                                  type="submit"
+                                  className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                >
+                                  Submit for Review
+                                </button>
+                              </form>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-black/10 bg-white p-6">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                Recent Sales
+              </div>
+
+              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                Activity
+              </h2>
+
+              <div className="mt-6 space-y-4">
+                {recentOrders.length === 0 ? (
+                  <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
+                    No sales yet.
+                  </div>
+                ) : (
+                  recentOrders.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="font-semibold text-black">
+                            {item.title}
+                          </div>
+
+                          <div className="mt-1 text-sm text-neutral-600">
+                            {item.order?.email ?? "Customer"}
+                          </div>
+
+                          <div className="mt-1 text-xs text-neutral-500">
+                            {new Date(item.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-lg font-semibold text-black">
+                            {fmtCents(item.vendorPayoutCents ?? 0)}
+                          </div>
+
+                          <div className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                            {item.payoutStatus}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
+          <p className="text-neutral-600">
+            Select a vendor to view analytics, bundles, orders, and Stripe status.
+          </p>
+        </section>
+      )}
     </main>
   );
 }
