@@ -4,6 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
+
 type LayoutProps = {
   children: React.ReactNode;
 };
@@ -14,6 +22,7 @@ const publicLinks = [
 ];
 
 const accountLinks = [
+  { href: "/account", label: "My Account" },
   { href: "/orders", label: "My Orders" },
 ];
 
@@ -23,9 +32,7 @@ const vendorLinks = [
   { href: "/vendor/dashboard", label: "Vendor Dashboard" },
 ];
 
-const adminLinks = [
-  { href: "/admin", label: "Admin" },
-];
+const adminLinks = [{ href: "/admin", label: "Admin" }];
 
 function NavLink({
   href,
@@ -55,6 +62,7 @@ function NavLink({
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [bagCount] = useState(1);
 
@@ -137,6 +145,27 @@ export default function Layout({ children }: LayoutProps) {
                   pathname={pathname}
                 />
               ))}
+
+              {/* AUTH */}
+              <SignedOut>
+                <div className="flex items-center gap-2">
+                  <SignInButton mode="modal">
+                    <button className="rounded-full border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:border-black">
+                      Sign In
+                    </button>
+                  </SignInButton>
+
+                  <SignUpButton mode="modal">
+                    <button className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
+                      Sign Up
+                    </button>
+                  </SignUpButton>
+                </div>
+              </SignedOut>
+
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
             </nav>
 
             {/* MOBILE NAV */}
@@ -187,6 +216,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="text-xl font-semibold tracking-[-0.03em]">
                   OutfitInABag
                 </div>
+
                 <div className="mt-1 text-sm text-neutral-500">
                   Curated outfit bundles
                 </div>
@@ -246,6 +276,28 @@ export default function Layout({ children }: LayoutProps) {
                       />
                     </div>
                   ))}
+
+                  <SignedOut>
+                    <div className="flex flex-col gap-3 pt-2">
+                      <SignInButton mode="modal">
+                        <button className="rounded-full border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-black">
+                          Sign In
+                        </button>
+                      </SignInButton>
+
+                      <SignUpButton mode="modal">
+                        <button className="rounded-full bg-black px-4 py-3 text-sm font-semibold text-white">
+                          Sign Up
+                        </button>
+                      </SignUpButton>
+                    </div>
+                  </SignedOut>
+
+                  <SignedIn>
+                    <div className="pt-2">
+                      <UserButton afterSignOutUrl="/" />
+                    </div>
+                  </SignedIn>
                 </div>
               </section>
 
