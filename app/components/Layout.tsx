@@ -5,11 +5,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import {
-  SignedIn,
-  SignedOut,
   SignInButton,
   SignUpButton,
   UserButton,
+  useUser,
 } from "@clerk/nextjs";
 
 type LayoutProps = {
@@ -62,6 +61,7 @@ function NavLink({
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
+  const { isSignedIn } = useUser();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [bagCount] = useState(1);
@@ -71,11 +71,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [pathname]);
 
   useEffect(() => {
-    if (menuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = menuOpen ? "hidden" : "";
 
     return () => {
       document.body.style.overflow = "";
@@ -84,11 +80,9 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] text-black">
-      {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f7f5f2]/95 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex h-[76px] items-center justify-between">
-            {/* LOGO */}
             <Link href="/" className="min-w-0">
               <div className="text-[1.5rem] font-semibold tracking-[-0.05em] text-black">
                 OutfitInABag
@@ -99,7 +93,6 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </Link>
 
-            {/* DESKTOP NAV */}
             <nav className="hidden items-center gap-8 md:flex">
               {publicLinks.map((item) => (
                 <NavLink
@@ -146,8 +139,7 @@ export default function Layout({ children }: LayoutProps) {
                 />
               ))}
 
-              {/* AUTH */}
-              <SignedOut>
+              {!isSignedIn && (
                 <div className="flex items-center gap-2">
                   <SignInButton mode="modal">
                     <button className="rounded-full border border-black/15 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:border-black">
@@ -161,14 +153,11 @@ export default function Layout({ children }: LayoutProps) {
                     </button>
                   </SignUpButton>
                 </div>
-              </SignedOut>
+              )}
 
-              <SignedIn>
-                <UserButton afterSignOutUrl="/" />
-              </SignedIn>
+              {isSignedIn && <UserButton />}
             </nav>
 
-            {/* MOBILE NAV */}
             <div className="flex items-center gap-2 md:hidden">
               <Link
                 href="/outfits"
@@ -201,7 +190,6 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </header>
 
-      {/* MOBILE DRAWER */}
       {menuOpen && (
         <>
           <button
@@ -238,25 +226,18 @@ export default function Layout({ children }: LayoutProps) {
                 </h3>
 
                 <div className="space-y-4 text-lg">
-                  {publicLinks.map((item) => (
-                    <div key={item.href}>
-                      <NavLink
-                        href={item.href}
-                        label={item.label}
-                        pathname={pathname}
-                        onClick={() => setMenuOpen(false)}
-                      />
-                    </div>
-                  ))}
-
-                  <div>
-                    <NavLink
-                      href="/bag"
-                      label={`Bag (${bagCount})`}
-                      pathname={pathname}
-                      onClick={() => setMenuOpen(false)}
-                    />
-                  </div>
+                  {[...publicLinks, { href: "/bag", label: `Bag (${bagCount})` }].map(
+                    (item) => (
+                      <div key={item.href}>
+                        <NavLink
+                          href={item.href}
+                          label={item.label}
+                          pathname={pathname}
+                          onClick={() => setMenuOpen(false)}
+                        />
+                      </div>
+                    )
+                  )}
                 </div>
               </section>
 
@@ -277,7 +258,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   ))}
 
-                  <SignedOut>
+                  {!isSignedIn && (
                     <div className="flex flex-col gap-3 pt-2">
                       <SignInButton mode="modal">
                         <button className="rounded-full border border-black/15 bg-white px-4 py-3 text-sm font-semibold text-black">
@@ -291,13 +272,13 @@ export default function Layout({ children }: LayoutProps) {
                         </button>
                       </SignUpButton>
                     </div>
-                  </SignedOut>
+                  )}
 
-                  <SignedIn>
+                  {isSignedIn && (
                     <div className="pt-2">
-                      <UserButton afterSignOutUrl="/" />
+                      <UserButton />
                     </div>
-                  </SignedIn>
+                  )}
                 </div>
               </section>
 
