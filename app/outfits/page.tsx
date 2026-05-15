@@ -138,22 +138,7 @@ export default async function OutfitDetailsPage({
               Add Full Fit to Bag
             </Link>
 
-            {userId ? (
-              <form action={toggleSavedOutfit}>
-                <input type="hidden" name="bundleId" value={bundle.id} />
-
-                <button
-                  type="submit"
-                  className="inline-flex rounded-full border border-black/15 bg-white px-6 py-4 text-sm font-semibold text-black transition hover:border-black"
-                >
-                  {saved ? "Saved ❤️" : "Save Outfit ♡"}
-                </button>
-              </form>
-            ) : (
-              <div className="inline-flex rounded-full border border-black/10 bg-[#f7f5f2] px-6 py-4 text-sm font-medium text-neutral-500">
-                Sign in to save outfits
-              </div>
-            )}
+            {
           </div>
         </div>
       </section>
