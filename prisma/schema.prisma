@@ -24,8 +24,9 @@ model Bundle {
   isFeatured         Boolean     @default(false)
   createdAt          DateTime    @default(now())
 
-  vendor     Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
+  vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  savedOutfits  SavedOutfit[]
 
   @@index([vendorId])
   @@index([occasion])
@@ -50,11 +51,11 @@ model Order {
 
   payoutStatus String @default("PENDING")
 
-  gmvCents          Int @default(0)
-  platformFeeCents  Int @default(0)
-  vendorTotalCents  Int @default(0)
-  stripeFeeCents    Int @default(0)
-  netRevenueCents   Int @default(0)
+  gmvCents         Int @default(0)
+  platformFeeCents Int @default(0)
+  vendorTotalCents Int @default(0)
+  stripeFeeCents   Int @default(0)
+  netRevenueCents  Int @default(0)
 
   items OrderItem[]
 }
@@ -133,6 +134,19 @@ model VendorApplication {
   status       String   @default("PENDING")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model SavedOutfit {
+  id        String   @id @default(cuid())
+  userId    String
+  bundleId  String
+  createdAt DateTime @default(now())
+
+  bundle Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bundleId])
+  @@index([userId])
+  @@index([bundleId])
 }
 
 enum BundleTier {
