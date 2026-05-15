@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
-import { toggleSavedOutfit } from "./actions";
+
 
 export const dynamic = "force-dynamic";
 
