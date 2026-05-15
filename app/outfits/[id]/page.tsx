@@ -1,225 +1,194 @@
-import { OUTFITS } from "@/lib/outfits";
-import Image from "next/image";
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 
-export default async function OutfitPage({
+import { prisma } from "@/lib/prisma";
+import { toggleSavedOutfit } from "./actions";
+
+export const dynamic = "force-dynamic";
+
+function fmtPrice(cents: number | null | undefined) {
+  if (!cents) return "—";
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+export default async function OutfitDetailsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const resolved = await params;
+  const id = resolved.id;
 
-  const outfit = OUTFITS.find((o) => String(o.id) === String(id));
+  const { userId } = await auth();
 
-  if (!outfit) {
+  const bundle = await prisma.bundle.findUnique({
+    where: { id },
+    include: {
+      vendor: true,
+    },
+  });
+
+  if (!bundle || !bundle.published) {
     return (
-      <main
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          padding: 24,
-        }}
-      >
-        <Link
-          href="/outfits"
-          style={{
-            fontWeight: 900,
-            textDecoration: "none",
-            color: "#111",
-          }}
-        >
-          ← Back to outfits
-        </Link>
-
-        <div
-          style={{
-            marginTop: 20,
-            padding: 20,
-            border: "1px solid #eee",
-            borderRadius: 16,
-            background: "white",
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 900,
-            }}
-          >
-            Outfit not found
+      <main className="mx-auto max-w-5xl px-4 py-16">
+        <div className="rounded-[32px] border border-black/10 bg-white p-8">
+          <h1 className="text-4xl font-semibold tracking-[-0.04em]">
+            Outfit not found.
           </h1>
 
-          <p style={{ color: "#555", marginTop: 10 }}>
-            We couldn’t find a fit for this link.
+          <p className="mt-3 text-neutral-600">
+            This outfit may have been removed or is not published yet.
           </p>
 
-          <div style={{ marginTop: 16 }}>
-            <Link
-              href="/outfits"
-              style={{
-                fontWeight: 900,
-                textDecoration: "none",
-                color: "#111",
-              }}
-            >
-              Browse all outfits →
-            </Link>
-          </div>
+          <Link
+            href="/outfits"
+            className="mt-6 inline-flex rounded-full bg-black px-6 py-3 text-sm font-semibold text-white"
+          >
+            Back to outfits
+          </Link>
         </div>
       </main>
     );
   }
 
-  return (
-    <main
-      style={{
-        maxWidth: 1100,
-        margin: "0 auto",
-        padding: 24,
-      }}
-    >
-      <Link
-        href="/outfits"
-        style={{
-          fontWeight: 900,
-          textDecoration: "none",
-          color: "#111",
-        }}
-      >
-        ← Back to outfits
-      </Link>
+  const saved = userId
+    ? await prisma.savedOutfit.findUnique({
+        where: {
+          userId_bundleId: {
+            userId,
+            bundleId: bundle.id,
+          },
+        },
+      })
+    : null;
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 30,
-          marginTop: 20,
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            height: 560,
-            borderRadius: 20,
-            overflow: "hidden",
-            border: "1px solid #eee",
-            background: "#f3f3f3",
-          }}
-        >
-          <Image
-            src={outfit.image}
-            alt={outfit.title}
-            fill
-            sizes="(max-width: 900px) 100vw, 50vw"
-            style={{ objectFit: "cover" }}
-            priority
-          />
+  return (
+    <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
+      <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="overflow-hidden rounded-[32px] border border-black/10 bg-white">
+          {bundle.image ? (
+            <img
+              src={bundle.image}
+              alt={bundle.title}
+              className="h-full min-h-[420px] w-full object-cover"
+            />
+          ) : (
+            <div className="flex min-h-[420px] items-center justify-center bg-[#f7f5f2] text-neutral-400">
+              No image available
+            </div>
+          )}
         </div>
 
-        <div>
-          <div
-            style={{
-              display: "inline-block",
-              background: "#f3f3f3",
-              border: "1px solid #e6e6e6",
-              borderRadius: 999,
-              padding: "6px 10px",
-              fontSize: 12,
-              fontWeight: 900,
-              color: "#333",
-            }}
-          >
-            {outfit.occasion}
+        <div className="rounded-[32px] border border-black/10 bg-white p-6 sm:p-8">
+          <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+            {bundle.occasion}
           </div>
 
-          <h1
-            style={{
-              fontSize: 40,
-              fontWeight: 950,
-              marginTop: 14,
-              lineHeight: 1,
-              color: "#111",
-            }}
-          >
-            {outfit.title}
+          <h1 className="mt-5 text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
+            {bundle.title}
           </h1>
 
-          <p
-            style={{
-              color: "#555",
-              marginTop: 14,
-              fontSize: 16,
-              lineHeight: 1.55,
-            }}
-          >
-            {outfit.description}
+          <p className="mt-5 text-base leading-7 text-neutral-600">
+            {bundle.description}
           </p>
 
-          <div
-            style={{
-              marginTop: 24,
-              border: "1px solid #eee",
-              borderRadius: 16,
-              background: "#fafafa",
-              padding: 18,
-            }}
-          >
-            <div style={{ fontWeight: 900, marginBottom: 12 }}>
-              What’s included
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
+              Vendor: {bundle.vendor?.name ?? "OutfitInABag"}
             </div>
 
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: 20,
-                color: "#444",
-                lineHeight: 1.9,
-              }}
-            >
-              <li>Top</li>
-              <li>Bottom</li>
-              <li>Shoes</li>
-              <li>Accessories</li>
-            </ul>
+            {bundle.tier ? (
+              <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
+                {bundle.tier}
+              </div>
+            ) : null}
           </div>
 
-          <div style={{ marginTop: 26 }}>
-            <div
-              style={{
-                fontSize: 30,
-                fontWeight: 950,
-                color: "#111",
-              }}
+          <div className="mt-8 text-5xl font-semibold tracking-[-0.05em] text-black">
+            {fmtPrice(bundle.price)}
+          </div>
+
+          {bundle.retailValue ? (
+            <div className="mt-2 text-sm text-neutral-500">
+              Estimated retail value: {fmtPrice(bundle.retailValue)}
+            </div>
+          ) : null}
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href={`/bag?addBundleId=${bundle.id}`}
+              className="inline-flex rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              ${(outfit.price / 100).toFixed(2)}
+              Add Full Fit to Bag
+            </Link>
+
+            {userId ? (
+              <form action={toggleSavedOutfit}>
+                <input type="hidden" name="bundleId" value={bundle.id} />
+
+                <button
+                  type="submit"
+                  className="inline-flex rounded-full border border-black/15 bg-white px-6 py-4 text-sm font-semibold text-black transition hover:border-black"
+                >
+                  {saved ? "Saved ❤️" : "Save Outfit ♡"}
+                </button>
+              </form>
+            ) : (
+              <div className="inline-flex rounded-full border border-black/10 bg-[#f7f5f2] px-6 py-4 text-sm font-medium text-neutral-500">
+                Sign in to save outfits
+              </div>
+            )}
+          </div>
+
+          <div className="mt-10 rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+              Outfit Details
             </div>
 
-            <form action="/bag" method="GET">
-              <input type="hidden" name="addBundleId" value={outfit.id} />
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
+                  Occasion
+                </div>
 
-              <button
-                type="submit"
-                style={{
-                  marginTop: 16,
-                  width: "100%",
-                  padding: "15px",
-                  background: "#111",
-                  color: "white",
-                  fontWeight: 900,
-                  borderRadius: 14,
-                  border: "none",
-                  fontSize: 16,
-                  cursor: "pointer",
-                }}
-              >
-                BUY THE FULL FIT
-              </button>
-            </form>
+                <div className="mt-1 text-sm font-semibold text-black">
+                  {bundle.occasion}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
+                  Vendor
+                </div>
+
+                <div className="mt-1 text-sm font-semibold text-black">
+                  {bundle.vendor?.name ?? "OutfitInABag"}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
+                  Tier
+                </div>
+
+                <div className="mt-1 text-sm font-semibold text-black">
+                  {bundle.tier ?? "—"}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
+                  Published
+                </div>
+
+                <div className="mt-1 text-sm font-semibold text-black">
+                  {bundle.published ? "Yes" : "No"}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
