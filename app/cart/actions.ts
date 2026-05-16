@@ -3,17 +3,27 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function addBundleToCart(formData: FormData) {
   const { userId } = await auth();
   const bundleId = String(formData.get("bundleId") || "");
 
   if (!userId) {
-    throw new Error("You must be signed in to add items to your bag.");
+    redirect("/account");
   }
 
   if (!bundleId) {
     throw new Error("Missing bundle ID.");
+  }
+
+  const bundle = await prisma.bundle.findUnique({
+    where: { id: bundleId },
+    select: { id: true },
+  });
+
+  if (!bundle) {
+    throw new Error("Bundle not found.");
   }
 
   const cart = await prisma.cart.upsert({
@@ -26,7 +36,7 @@ export async function addBundleToCart(formData: FormData) {
     where: {
       cartId_bundleId: {
         cartId: cart.id,
-        bundleId,
+        bundleId: bundle.id,
       },
     },
     update: {
@@ -36,21 +46,25 @@ export async function addBundleToCart(formData: FormData) {
     },
     create: {
       cartId: cart.id,
-      bundleId,
+      bundleId: bundle.id,
       quantity: 1,
     },
   });
 
   revalidatePath("/bag");
   revalidatePath("/outfits");
-  revalidatePath(`/outfits/${bundleId}`);
+  revalidatePath(`/outfits/${bundle.id}`);
+
+  redirect("/bag");
 }
 
 export async function removeCartItem(formData: FormData) {
   const { userId } = await auth();
   const cartItemId = String(formData.get("cartItemId") || "");
 
-  if (!userId || !cartItemId) return;
+  if (!userId || !cartItemId) {
+    redirect("/bag");
+  }
 
   await prisma.cartItem.deleteMany({
     where: {
@@ -62,6 +76,8 @@ export async function removeCartItem(formData: FormData) {
   });
 
   revalidatePath("/bag");
+
+  redirect("/bag");
 }
 
 export async function updateCartItemQuantity(formData: FormData) {
@@ -69,7 +85,9 @@ export async function updateCartItemQuantity(formData: FormData) {
   const cartItemId = String(formData.get("cartItemId") || "");
   const quantity = Number(formData.get("quantity") || 1);
 
-  if (!userId || !cartItemId) return;
+  if (!userId || !cartItemId) {
+    redirect("/bag");
+  }
 
   if (quantity <= 0) {
     await prisma.cartItem.deleteMany({
@@ -95,4 +113,6 @@ export async function updateCartItemQuantity(formData: FormData) {
   }
 
   revalidatePath("/bag");
+
+  redirect("/bag");
 }
