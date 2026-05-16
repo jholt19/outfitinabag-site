@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const bundleId = String(formData.get("bundleId") || "");
 
   if (!bundleId) {
-    redirect("/outfits");
+    redirect("/outfits?cartError=missingBundleId");
   }
 
   const bundle = await prisma.bundle.findUnique({
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   });
 
   if (!bundle) {
-    redirect("/outfits");
+    redirect("/outfits?cartError=bundleNotFound");
   }
 
   const cart = await prisma.cart.upsert({
@@ -53,5 +53,5 @@ export async function POST(req: Request) {
     },
   });
 
-  redirect("/bag");
+  redirect("/bag?added=true");
 }
