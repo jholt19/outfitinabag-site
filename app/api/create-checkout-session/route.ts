@@ -1,4 +1,6 @@
 import Stripe from "stripe";
+import { auth } from "@clerk/nextjs/server";
+
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -26,8 +28,120 @@ export async function GET(req: Request) {
       );
     }
 
+    const stripe = new Stripe(key, {
+      apiVersion: "2026-01-28.clover",
+    });
+
     const url = new URL(req.url);
     const bundleId = url.searchParams.get("bundleId");
+    const cartCheckout = url.searchParams.get("cart") === "true";
+
+    const baseUrl = getBaseUrl();
+
+    if (cartCheckout) {
+      const { userId } = await auth();
+
+      if (!userId) {
+        return Response.redirect(`${baseUrl}/account`, 303);
+      }
+
+      const cart = await prisma.cart.findUnique({
+        where: { userId },
+        include: {
+          items: {
+            include: {
+              bundle: {
+                include: {
+                  vendor: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const items = cart?.items ?? [];
+
+      if (items.length === 0) {
+        return Response.json(
+          { ok: false, error: "Your cart is empty." },
+          { status: 400 }
+        );
+      }
+
+      const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] =
+        items.map((item) => ({
+          quantity: item.quantity,
+          price_data: {
+            currency: "usd",
+            unit_amount: item.bundle.price,
+            product_data: {
+              name: item.bundle.title,
+              images:
+                item.bundle.image && item.bundle.image.startsWith("http")
+                  ? [item.bundle.image]
+                  : [],
+              metadata: {
+                bundleId: item.bundle.id,
+                vendorId: item.bundle.vendorId,
+                cartItemId: item.id,
+              },
+            },
+          },
+        }));
+
+      const subtotal = items.reduce((sum, item) => {
+        return sum + item.bundle.price * item.quantity;
+      }, 0);
+
+      const vendorIds = Array.from(
+        new Set(items.map((item) => item.bundle.vendorId))
+      );
+
+      const singleVendor =
+        vendorIds.length === 1 ? items[0]?.bundle.vendor : null;
+
+      const platformFeeCents = Math.round(subtotal * 0.2);
+
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items,
+        success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/bag`,
+        metadata: {
+          checkoutType: "cart",
+          cartId: cart?.id ?? "",
+          userId,
+          vendorIds: vendorIds.join(","),
+          platformFeeCents: String(platformFeeCents),
+        },
+      };
+
+      if (singleVendor?.stripeAccountId) {
+        sessionParams.payment_intent_data = {
+          application_fee_amount: platformFeeCents,
+          transfer_data: {
+            destination: singleVendor.stripeAccountId,
+          },
+          metadata: {
+            checkoutType: "cart",
+            cartId: cart?.id ?? "",
+            userId,
+            vendorId: singleVendor.id,
+            platformFeeCents: String(platformFeeCents),
+          },
+        };
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
+
+      if (!session.url) {
+        throw new Error("Stripe did not return a checkout URL.");
+      }
+
+      return Response.redirect(session.url, 303);
+    }
 
     if (!bundleId) {
       return Response.json(
@@ -59,18 +173,11 @@ export async function GET(req: Request) {
       );
     }
 
-    const stripe = new Stripe(key, {
-      apiVersion: "2026-01-28.clover",
-    });
-
-    const baseUrl = getBaseUrl();
-
     const platformFeeCents = Math.round(bundle.price * 0.2);
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-
       line_items: [
         {
           quantity: 1,
@@ -91,28 +198,27 @@ export async function GET(req: Request) {
           },
         },
       ],
-
       payment_intent_data: {
         application_fee_amount: platformFeeCents,
         transfer_data: {
           destination: bundle.vendor.stripeAccountId,
         },
         metadata: {
+          checkoutType: "single",
           bundleId: bundle.id,
           vendorId: bundle.vendorId,
           platformFeeCents: String(platformFeeCents),
         },
       },
-
       metadata: {
+        checkoutType: "single",
         bundleId: bundle.id,
         vendorId: bundle.vendorId,
         platformFeeCents: String(platformFeeCents),
         stripeConnectDestination: bundle.vendor.stripeAccountId,
       },
-
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/bag?addBundleId=${bundle.id}`,
+      cancel_url: `${baseUrl}/bag`,
     });
 
     if (!session.url) {
