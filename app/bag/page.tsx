@@ -141,7 +141,10 @@ export default async function BagPage() {
                     </div>
                   </div>
 
-                  <form action={updateCartItemQuantity} className="flex items-center gap-2">
+                  <form
+                    action={updateCartItemQuantity}
+                    className="flex items-center gap-2"
+                  >
                     <input type="hidden" name="cartItemId" value={item.id} />
 
                     <label className="text-sm font-semibold text-neutral-600">
