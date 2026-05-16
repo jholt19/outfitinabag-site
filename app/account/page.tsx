@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth, currentUser } from "@clerk/nextjs/server";
+
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function AccountPage() {
   }
 
   const user = await currentUser();
+
   const email = user?.emailAddresses?.[0]?.emailAddress ?? "";
 
   const orders = email
@@ -36,19 +38,28 @@ export default async function AccountPage() {
         where: { email },
         orderBy: { createdAt: "desc" },
         take: 10,
-        include: {
-          items: {
-            include: {
-              bundle: true,
-              vendor: true,
-            },
-          },
-        },
       })
     : [];
 
+  const savedOutfits = await prisma.savedOutfit.findMany({
+    where: {
+      userId,
+    },
+    include: {
+      bundle: {
+        include: {
+          vendor: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
+      {/* HERO */}
       <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
         <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
           My Account
@@ -59,7 +70,7 @@ export default async function AccountPage() {
         </h1>
 
         <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-          {email || "Your OutfitInABag customer account"}
+          {email}
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
@@ -69,16 +80,10 @@ export default async function AccountPage() {
           >
             Shop Outfits
           </Link>
-
-          <Link
-            href="/orders"
-            className="rounded-full border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-black"
-          >
-            View Orders
-          </Link>
         </div>
       </section>
 
+      {/* STATS */}
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         <div className="rounded-[24px] border border-black/10 bg-white p-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
@@ -108,75 +113,87 @@ export default async function AccountPage() {
           </div>
 
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            Soon
+            {savedOutfits.length}
           </div>
         </div>
       </section>
 
+      {/* SAVED OUTFITS */}
       <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-              Recent Orders
+              Wishlist
             </div>
 
             <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-              Order History
+              Saved Outfits
             </h2>
           </div>
-
-          <Link
-            href="/orders"
-            className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
-          >
-            View All
-          </Link>
         </div>
 
-        <div className="mt-6 space-y-4">
-          {orders.length === 0 ? (
-            <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
-              No orders found for this email yet.
-            </div>
-          ) : (
-            orders.map((order) => {
-              const firstItem = order.items[0];
-
-              return (
-                <div
-                  key={order.id}
-                  className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="text-sm font-semibold text-black">
-                        {firstItem?.title ?? "Order"}
-                      </div>
-
-                      <div className="mt-1 text-xs text-neutral-500">
-                        {new Date(order.createdAt).toLocaleString()}
-                      </div>
-
-                      <div className="mt-2 text-sm text-neutral-600">
-                        Vendor: {firstItem?.vendor?.name ?? "—"}
-                      </div>
+        {savedOutfits.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
+            You have not saved any outfits yet.
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {savedOutfits.map((saved) => (
+              <article
+                key={saved.id}
+                className="overflow-hidden rounded-[24px] border border-black/10 bg-[#f7f5f2]"
+              >
+                <Link href={`/outfits/${saved.bundle.id}`}>
+                  {saved.bundle.image ? (
+                    <img
+                      src={saved.bundle.image}
+                      alt={saved.bundle.title}
+                      className="h-[300px] w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-[300px] items-center justify-center bg-white text-neutral-400">
+                      No image
                     </div>
+                  )}
+                </Link>
 
-                    <div className="text-right">
-                      <div className="text-lg font-semibold text-black">
-                        {fmtCents(order.amountTotal)}
-                      </div>
+                <div className="p-5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    {saved.bundle.occasion}
+                  </div>
 
-                      <div className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-                        {order.status ?? "unknown"}
-                      </div>
-                    </div>
+                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
+                    {saved.bundle.title}
+                  </h3>
+
+                  <p className="mt-2 text-sm text-neutral-600">
+                    By {saved.bundle.vendor?.name ?? "OutfitInABag"}
+                  </p>
+
+                  <div className="mt-4 text-lg font-semibold text-black">
+                    {fmtCents(saved.bundle.price)}
+                  </div>
+
+                  <div className="mt-5 grid gap-3">
+                    <Link
+                      href={`/outfits/${saved.bundle.id}`}
+                      className="rounded-full bg-black px-5 py-3 text-center text-sm font-semibold text-white transition hover:opacity-90"
+                    >
+                      View Outfit
+                    </Link>
+
+                    <Link
+                      href={`/bag?addBundleId=${saved.bundle.id}`}
+                      className="rounded-full border border-black/15 bg-white px-5 py-3 text-center text-sm font-semibold text-black transition hover:border-black"
+                    >
+                      Add to Bag
+                    </Link>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );
