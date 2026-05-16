@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+
 import { prisma } from "@/lib/prisma";
+import { toggleSavedOutfit } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +17,10 @@ export default async function OutfitPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const { userId } = await auth();
 
   const bundle = await prisma.bundle.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       vendor: true,
     },
@@ -47,17 +49,24 @@ export default async function OutfitPage({
     );
   }
 
+  const saved = userId
+    ? await prisma.savedOutfit.findUnique({
+        where: {
+          userId_bundleId: {
+            userId,
+            bundleId: bundle.id,
+          },
+        },
+      })
+    : null;
+
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
-      <Link
-        href="/outfits"
-        className="text-sm font-semibold text-black"
-      >
+      <Link href="/outfits" className="text-sm font-semibold text-black">
         ← Back to outfits
       </Link>
 
       <section className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        {/* IMAGE */}
         <div className="overflow-hidden rounded-[32px] border border-black/10 bg-white">
           {bundle.image ? (
             <img
@@ -72,7 +81,6 @@ export default async function OutfitPage({
           )}
         </div>
 
-        {/* DETAILS */}
         <div className="rounded-[32px] border border-black/10 bg-white p-6 sm:p-8">
           <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
             {bundle.occasion}
@@ -91,24 +99,23 @@ export default async function OutfitPage({
               Vendor: {bundle.vendor?.name ?? "OutfitInABag"}
             </div>
 
-            {bundle.tier && (
+            {bundle.tier ? (
               <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
                 {bundle.tier}
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="mt-10 text-5xl font-semibold tracking-[-0.05em] text-black">
             {fmtPrice(bundle.price)}
           </div>
 
-          {bundle.retailValue && (
+          {bundle.retailValue ? (
             <div className="mt-2 text-sm text-neutral-500">
               Estimated retail value: {fmtPrice(bundle.retailValue)}
             </div>
-          )}
+          ) : null}
 
-          {/* BUTTONS */}
           <div className="mt-10 grid gap-3">
             <Link
               href={`/bag?addBundleId=${bundle.id}`}
@@ -117,12 +124,24 @@ export default async function OutfitPage({
               Add Full Fit to Bag
             </Link>
 
-            <button className="rounded-full border border-black/15 bg-white px-6 py-4 text-sm font-semibold text-black transition hover:border-black">
-              Save Outfit ♡
-            </button>
+            {userId ? (
+              <form action={toggleSavedOutfit}>
+                <input type="hidden" name="bundleId" value={bundle.id} />
+
+                <button
+                  type="submit"
+                  className="w-full rounded-full border border-black/15 bg-white px-6 py-4 text-sm font-semibold text-black transition hover:border-black"
+                >
+                  {saved ? "Saved ❤️" : "Save Outfit ♡"}
+                </button>
+              </form>
+            ) : (
+              <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-6 py-4 text-center text-sm font-medium text-neutral-500">
+                Sign in to save outfits
+              </div>
+            )}
           </div>
 
-          {/* DETAILS CARD */}
           <div className="mt-10 rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5">
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
               Outfit Details
