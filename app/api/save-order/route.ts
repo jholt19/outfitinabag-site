@@ -23,6 +23,7 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => null);
     const session_id = body?.session_id;
+    const clearCart = Boolean(body?.clear_cart);
 
     if (!session_id) {
       return NextResponse.json(
@@ -43,6 +44,10 @@ export async function POST(req: Request) {
       expand: ["data.price.product"],
     });
 
+    const checkoutType = String(session.metadata?.checkoutType || "single");
+    const cartId = String(session.metadata?.cartId || "");
+    const userId = String(session.metadata?.userId || "");
+
     const bundleId = String(session.metadata?.bundleId || "");
     const vendorId = String(session.metadata?.vendorId || "");
 
@@ -53,10 +58,25 @@ export async function POST(req: Request) {
     });
 
     if (existingOrder) {
+      if (clearCart && checkoutType === "cart" && cartId) {
+        await prisma.cartItem.deleteMany({
+          where: {
+            cartId,
+            ...(userId
+              ? {
+                  cart: {
+                    userId,
+                  },
+                }
+              : {}),
+          },
+        });
+      }
+
       return NextResponse.json({
         ok: true,
         orderId: existingOrder.id,
-        message: "Order already saved.",
+        message: "Order already saved. Bag cleared.",
       });
     }
 
@@ -71,12 +91,14 @@ export async function POST(req: Request) {
         : session.payment_intent?.id || null;
 
     const orderItems = lineItems.data.map((item) => {
-     const rawProduct =
-  typeof item.price?.product === "string" ? null : item.price?.product ?? null;
+      const rawProduct =
+        typeof item.price?.product === "string"
+          ? null
+          : item.price?.product ?? null;
 
-const product: Stripe.Product | null = isStripeProduct(rawProduct)
-  ? rawProduct
-  : null;
+      const product: Stripe.Product | null = isStripeProduct(rawProduct)
+        ? rawProduct
+        : null;
 
       const itemBundleId =
         String(product?.metadata?.bundleId || bundleId || "") || null;
@@ -130,11 +152,29 @@ const product: Stripe.Product | null = isStripeProduct(rawProduct)
       },
     });
 
+    if (clearCart && checkoutType === "cart" && cartId) {
+      await prisma.cartItem.deleteMany({
+        where: {
+          cartId,
+          ...(userId
+            ? {
+                cart: {
+                  userId,
+                },
+              }
+            : {}),
+        },
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       orderId: order.id,
       items: order.items.length,
-      message: "Order saved.",
+      message:
+        checkoutType === "cart"
+          ? "Order saved and bag cleared."
+          : "Order saved.",
     });
   } catch (error: any) {
     console.error("save-order POST error:", error);
