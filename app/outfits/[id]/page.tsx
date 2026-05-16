@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 import { toggleSavedOutfit } from "./actions";
+import { addBundleToCart } from "@/app/cart/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -117,12 +118,25 @@ export default async function OutfitPage({
           ) : null}
 
           <div className="mt-10 grid gap-3">
-            <Link
-              href={`/bag?addBundleId=${bundle.id}`}
-              className="inline-flex items-center justify-center rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              Add Full Fit to Bag
-            </Link>
+            {userId ? (
+              <form action={addBundleToCart}>
+                <input type="hidden" name="bundleId" value={bundle.id} />
+
+                <button
+                  type="submit"
+                  className="w-full rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Add Full Fit to Bag
+                </button>
+              </form>
+            ) : (
+              <Link
+                href="/account"
+                className="inline-flex items-center justify-center rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Sign In to Add to Bag
+              </Link>
+            )}
 
             {userId ? (
               <form action={toggleSavedOutfit}>
