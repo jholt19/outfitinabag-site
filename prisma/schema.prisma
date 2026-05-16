@@ -92,6 +92,8 @@ model Vendor {
   status    String   @default("pending")
   apiKey    String?  @unique
 
+  clerkUserId String? @unique
+
   stripeAccountId      String? @unique
   stripeOnboardingDone Boolean @default(false)
   stripeChargesEnabled Boolean @default(false)
