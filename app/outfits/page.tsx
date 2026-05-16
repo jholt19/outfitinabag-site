@@ -139,12 +139,16 @@ export default async function OutfitsPage({
                 </div>
 
                 <div className="mt-5 grid gap-3">
-                  <Link
-                    href={`/bag?addBundleId=${bundle.id}`}
-                    className="rounded-full bg-black px-5 py-3 text-center text-sm font-semibold text-white transition hover:opacity-90"
-                  >
-                    Add Full Fit to Bag
-                  </Link>
+                  <form action="/api/cart/add" method="POST">
+                    <input type="hidden" name="bundleId" value={bundle.id} />
+
+                    <button
+                      type="submit"
+                      className="w-full rounded-full bg-black px-5 py-3 text-center text-sm font-semibold text-white transition hover:opacity-90"
+                    >
+                      Add Full Fit to Bag
+                    </button>
+                  </form>
 
                   <Link
                     href={`/outfits/${bundle.id}`}
