@@ -64,7 +64,7 @@ export default function Layout({ children }: LayoutProps) {
   const { isSignedIn } = useUser();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [bagCount] = useState(1);
+  const [bagCount, setBagCount] = useState(0);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -77,6 +77,31 @@ export default function Layout({ children }: LayoutProps) {
       document.body.style.overflow = "";
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    async function loadCartCount() {
+      if (!isSignedIn) {
+        setBagCount(0);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/cart/count", {
+          cache: "no-store",
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        setBagCount(Number(data?.count || 0));
+      } catch {
+        setBagCount(0);
+      }
+    }
+
+    loadCartCount();
+  }, [isSignedIn, pathname]);
+
+  const bagLabel = `Bag (${bagCount})`;
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] text-black">
@@ -105,9 +130,9 @@ export default function Layout({ children }: LayoutProps) {
 
               <Link
                 href="/bag"
-                className="rounded-full border border-black px-4 py-2 text-sm font-medium transition hover:bg-black hover:text-white"
+                className="relative rounded-full border border-black px-4 py-2 text-sm font-medium transition hover:bg-black hover:text-white"
               >
-                Bag ({bagCount})
+                {bagLabel}
               </Link>
 
               <div className="h-6 w-px bg-black/10" />
@@ -170,7 +195,7 @@ export default function Layout({ children }: LayoutProps) {
                 href="/bag"
                 className="rounded-full border border-black px-3 py-2 text-sm font-medium"
               >
-                Bag ({bagCount})
+                {bagLabel}
               </Link>
 
               <button
@@ -226,18 +251,19 @@ export default function Layout({ children }: LayoutProps) {
                 </h3>
 
                 <div className="space-y-4 text-lg">
-                  {[...publicLinks, { href: "/bag", label: `Bag (${bagCount})` }].map(
-                    (item) => (
-                      <div key={item.href}>
-                        <NavLink
-                          href={item.href}
-                          label={item.label}
-                          pathname={pathname}
-                          onClick={() => setMenuOpen(false)}
-                        />
-                      </div>
-                    )
-                  )}
+                  {[
+                    ...publicLinks,
+                    { href: "/bag", label: bagLabel },
+                  ].map((item) => (
+                    <div key={item.href}>
+                      <NavLink
+                        href={item.href}
+                        label={item.label}
+                        pathname={pathname}
+                        onClick={() => setMenuOpen(false)}
+                      />
+                    </div>
+                  ))}
                 </div>
               </section>
 
