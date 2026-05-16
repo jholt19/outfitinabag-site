@@ -24,9 +24,10 @@ model Bundle {
   isFeatured         Boolean     @default(false)
   createdAt          DateTime    @default(now())
 
-  vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  orderItems    OrderItem[]
-  savedOutfits  SavedOutfit[]
+  vendor       Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+  savedOutfits SavedOutfit[]
+  cartItems    CartItem[]
 
   @@index([vendorId])
   @@index([occasion])
@@ -51,11 +52,11 @@ model Order {
 
   payoutStatus String @default("PENDING")
 
-  gmvCents         Int @default(0)
-  platformFeeCents Int @default(0)
-  vendorTotalCents Int @default(0)
-  stripeFeeCents   Int @default(0)
-  netRevenueCents  Int @default(0)
+  gmvCents          Int @default(0)
+  platformFeeCents  Int @default(0)
+  vendorTotalCents  Int @default(0)
+  stripeFeeCents    Int @default(0)
+  netRevenueCents   Int @default(0)
 
   items OrderItem[]
 }
@@ -148,6 +149,31 @@ model SavedOutfit {
 
   @@unique([userId, bundleId])
   @@index([userId])
+  @@index([bundleId])
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  bundleId  String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  bundle Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, bundleId])
+  @@index([cartId])
   @@index([bundleId])
 }
 
