@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -7,30 +9,68 @@ function fmtCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export default async function VendorOrdersPage(props: any) {
-  const sp = await Promise.resolve(props.searchParams);
-  const vendorId = String(sp?.vendorId || "");
+export default async function VendorOrdersPage() {
+  const { userId } = await auth();
 
-  const vendors = await prisma.vendor.findMany({ orderBy: { name: "asc" } });
-  const vendorName = vendorId ? vendors.find((v) => v.id === vendorId)?.name : null;
-
-  if (!vendorId) {
+  if (!userId) {
     return (
-      <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
-        <h1 style={{ margin: 0 }}>Vendor • Orders</h1>
-        <p style={{ marginTop: 8, color: "#666" }}>Select a vendor from dashboard first.</p>
-        <Link href="/vendor/dashboard" style={{ fontWeight: 900 }}>← Back</Link>
+      <main className="mx-auto max-w-5xl px-4 py-12">
+        <section className="rounded-[32px] border border-black/10 bg-white p-8">
+          <h1 className="text-4xl font-semibold tracking-[-0.04em]">
+            Sign in required
+          </h1>
+
+          <p className="mt-3 text-neutral-600">
+            Please sign in to view vendor orders.
+          </p>
+        </section>
       </main>
     );
   }
 
-  // Pull vendor's order items (paid orders only)
+  const vendor = await prisma.vendor.findFirst({
+    where: {
+      clerkUserId: userId,
+    },
+  });
+
+  if (!vendor) {
+    return (
+      <main className="mx-auto max-w-5xl px-4 py-12">
+        <section className="rounded-[32px] border border-black/10 bg-white p-8">
+          <h1 className="text-4xl font-semibold tracking-[-0.04em]">
+            Vendor account not connected
+          </h1>
+
+          <p className="mt-3 text-neutral-600">
+            Claim your vendor account first.
+          </p>
+
+          <Link
+            href="/vendor/claim"
+            className="mt-6 inline-flex rounded-full bg-black px-6 py-3 text-sm font-semibold text-white"
+          >
+            Claim Vendor Account
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  const vendorId = vendor.id;
+
   const items = await prisma.orderItem.findMany({
     where: {
       vendorId,
-      order: { is: { status: "paid" } },
+      order: {
+        is: {
+          status: "paid",
+        },
+      },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: {
+      createdAt: "desc",
+    },
     select: {
       id: true,
       title: true,
@@ -52,21 +92,34 @@ export default async function VendorOrdersPage(props: any) {
     },
   });
 
-  // Group by order id for display
   const byOrder = new Map<string, typeof items>();
-  for (const it of items) {
-    const oid = it.order?.id ?? "unknown";
-    const arr = byOrder.get(oid) ?? [];
-    arr.push(it);
-    byOrder.set(oid, arr);
+
+  for (const item of items) {
+    const orderId = item.order?.id ?? "unknown";
+
+    const arr = byOrder.get(orderId) ?? [];
+
+    arr.push(item);
+
+    byOrder.set(orderId, arr);
   }
 
   const orders = Array.from(byOrder.entries())
     .map(([orderId, orderItems]) => {
       const order = orderItems[0]?.order;
-      const payoutTotal = orderItems.reduce((s, x) => s + (x.vendorPayoutCents ?? 0), 0);
-      const pending = orderItems.filter((x) => x.payoutStatus !== "PAID").reduce((s, x) => s + (x.vendorPayoutCents ?? 0), 0);
-      const paid = orderItems.filter((x) => x.payoutStatus === "PAID").reduce((s, x) => s + (x.vendorPayoutCents ?? 0), 0);
+
+      const payoutTotal = orderItems.reduce(
+        (sum, x) => sum + (x.vendorPayoutCents ?? 0),
+        0
+      );
+
+      const pending = orderItems
+        .filter((x) => x.payoutStatus !== "PAID")
+        .reduce((sum, x) => sum + (x.vendorPayoutCents ?? 0), 0);
+
+      const paid = orderItems
+        .filter((x) => x.payoutStatus === "PAID")
+        .reduce((sum, x) => sum + (x.vendorPayoutCents ?? 0), 0);
 
       return {
         orderId,
@@ -78,77 +131,145 @@ export default async function VendorOrdersPage(props: any) {
       };
     })
     .sort((a, b) => {
-      const ta = a.order?.createdAt ? new Date(a.order.createdAt).getTime() : 0;
-      const tb = b.order?.createdAt ? new Date(b.order.createdAt).getTime() : 0;
+      const ta = a.order?.createdAt
+        ? new Date(a.order.createdAt).getTime()
+        : 0;
+
+      const tb = b.order?.createdAt
+        ? new Date(b.order.createdAt).getTime()
+        : 0;
+
       return tb - ta;
     });
 
   return (
-    <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ margin: 0 }}>Vendor • Orders {vendorName ? `• ${vendorName}` : ""}</h1>
-          <p style={{ marginTop: 8, color: "#666" }}>
-            Orders containing your bundles (paid orders only). Payout status updates when Admin marks paid.
-          </p>
-        </div>
+    <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
+      <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+              Vendor Orders
+            </div>
 
-        <Link href={`/vendor/dashboard?vendorId=${encodeURIComponent(vendorId)}`} style={{ fontWeight: 900 }}>
-          ← Back to Dashboard
-        </Link>
-      </div>
+            <h1 className="mt-5 text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
+              {vendor.name}
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
+              Orders containing your bundles and payout tracking information.
+            </p>
+          </div>
+
+          <Link
+            href="/vendor/dashboard"
+            className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+          >
+            ← Back to Dashboard
+          </Link>
+        </div>
+      </section>
 
       {orders.length === 0 ? (
-        <div style={{ marginTop: 16, padding: 14, border: "1px solid #e5e7eb", borderRadius: 12, background: "white" }}>
-          No orders yet for this vendor.
-        </div>
+        <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
+          <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
+            No orders yet for this vendor.
+          </div>
+        </section>
       ) : (
-        <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+        <section className="mt-8 grid gap-6">
           {orders.map((o) => (
-            <div key={o.orderId} style={{ border: "1px solid #e5e7eb", borderRadius: 12, background: "white", padding: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 950 }}>
-                    Order: <span style={{ fontFamily: "monospace" }}>{o.orderId}</span>
+            <article
+              key={o.orderId}
+              className="rounded-[28px] border border-black/10 bg-white p-6"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Order
                   </div>
-                  <div style={{ fontSize: 13, opacity: 0.75, marginTop: 4 }}>
-                    {o.order?.createdAt ? new Date(o.order.createdAt).toLocaleString() : "—"} • {o.order?.email ?? "—"}
+
+                  <div className="mt-2 font-mono text-sm text-black">
+                    {o.orderId}
+                  </div>
+
+                  <div className="mt-3 text-sm text-neutral-600">
+                    {o.order?.createdAt
+                      ? new Date(o.order.createdAt).toLocaleString()
+                      : "—"}
+                  </div>
+
+                  <div className="mt-1 text-sm text-neutral-600">
+                    {o.order?.email ?? "Customer"}
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 900 }}>YOUR PAYOUT</div>
-                  <div style={{ fontSize: 16, fontWeight: 950 }}>{fmtCents(o.payoutTotal)}</div>
-                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                    Pending: {fmtCents(o.pending)} • Paid: {fmtCents(o.paid)}
+                <div className="text-right">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Your Payout
+                  </div>
+
+                  <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+                    {fmtCents(o.payoutTotal)}
+                  </div>
+
+                  <div className="mt-2 text-sm text-neutral-600">
+                    Pending: {fmtCents(o.pending)}
+                  </div>
+
+                  <div className="text-sm text-neutral-600">
+                    Paid: {fmtCents(o.paid)}
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginTop: 10, borderTop: "1px solid #eee", paddingTop: 10, display: "grid", gap: 8 }}>
-                {o.orderItems.map((it) => (
-                  <div key={it.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 900 }}>{it.title}</div>
-                      <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
-                        Qty {it.quantity} • Unit {fmtCents(it.unitPrice ?? 0)} • Payout {fmtCents(it.vendorPayoutCents ?? 0)}
-                      </div>
-                    </div>
+              <div className="mt-6 space-y-4 border-t border-black/10 pt-6">
+                {o.orderItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <div className="text-lg font-semibold text-black">
+                          {item.title}
+                        </div>
 
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 12, fontWeight: 900 }}>
-                        Status: {it.payoutStatus === "PAID" ? "PAID ✅" : "PENDING ⏳"}
+                        <div className="mt-2 text-sm text-neutral-600">
+                          Qty {item.quantity}
+                        </div>
+
+                        <div className="text-sm text-neutral-600">
+                          Unit Price: {fmtCents(item.unitPrice ?? 0)}
+                        </div>
+
+                        <div className="text-sm text-neutral-600">
+                          Vendor Payout:{" "}
+                          {fmtCents(item.vendorPayoutCents ?? 0)}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, opacity: 0.7 }}>
-                        {it.paidAt ? `Paid: ${new Date(it.paidAt).toLocaleDateString()}` : ""}
+
+                      <div className="text-right">
+                        <div className="text-sm font-semibold uppercase tracking-[0.12em] text-black">
+                          {item.payoutStatus === "PAID"
+                            ? "PAID ✅"
+                            : "PENDING ⏳"}
+                        </div>
+
+                        <div className="mt-2 text-xs text-neutral-500">
+                          {item.paidAt
+                            ? `Paid: ${new Date(
+                                item.paidAt
+                              ).toLocaleDateString()}`
+                            : ""}
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </article>
           ))}
-        </div>
+        </section>
       )}
     </main>
   );
