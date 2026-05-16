@@ -111,12 +111,6 @@ export default async function OutfitPage({
             {fmtPrice(bundle.price)}
           </div>
 
-          {bundle.retailValue ? (
-            <div className="mt-2 text-sm text-neutral-500">
-              Estimated retail value: {fmtPrice(bundle.retailValue)}
-            </div>
-          ) : null}
-
           <div className="mt-10 grid gap-3">
             {userId ? (
               <form action={addBundleToCart}>
@@ -154,54 +148,6 @@ export default async function OutfitPage({
                 Sign in to save outfits
               </div>
             )}
-          </div>
-
-          <div className="mt-10 rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-              Outfit Details
-            </div>
-
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <div>
-                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
-                  Occasion
-                </div>
-
-                <div className="mt-1 text-sm font-semibold text-black">
-                  {bundle.occasion}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
-                  Vendor
-                </div>
-
-                <div className="mt-1 text-sm font-semibold text-black">
-                  {bundle.vendor?.name ?? "OutfitInABag"}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
-                  Tier
-                </div>
-
-                <div className="mt-1 text-sm font-semibold text-black">
-                  {bundle.tier ?? "—"}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs uppercase tracking-[0.14em] text-neutral-400">
-                  Published
-                </div>
-
-                <div className="mt-1 text-sm font-semibold text-black">
-                  {bundle.published ? "Yes" : "No"}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
