@@ -1,6 +1,12 @@
 import Link from "next/link";
 
-export default function AdminPage() {
+import { requireAdmin } from "@/lib/admin";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminPage() {
+  await requireAdmin();
+
   return (
     <main className="mx-auto max-w-5xl px-4 pb-12 pt-6 sm:px-6 lg:px-8">
       <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
@@ -13,36 +19,76 @@ export default function AdminPage() {
         </h1>
 
         <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600 sm:text-lg">
-          Access your admin tools for bundles, vendors, and orders.
+          Access your admin tools for bundles, vendors, orders, and payouts.
         </p>
 
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/admin/dashboard"
-            className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+            className="rounded-[24px] bg-black p-5 text-white transition hover:opacity-90"
           >
-            Dashboard
+            <div className="text-sm font-semibold uppercase tracking-[0.14em]">
+              Dashboard
+            </div>
+
+            <div className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
+              Analytics
+            </div>
+
+            <p className="mt-2 text-sm text-white/70">
+              Revenue, GMV, and marketplace insights.
+            </p>
           </Link>
 
           <Link
             href="/admin/bundles"
-            className="rounded-full border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-black"
+            className="rounded-[24px] border border-black/10 bg-white p-5 transition hover:border-black"
           >
-            Bundles
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-black">
+              Bundles
+            </div>
+
+            <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-black">
+              Manage
+            </div>
+
+            <p className="mt-2 text-sm text-neutral-600">
+              Review, publish, and feature outfit bundles.
+            </p>
           </Link>
 
           <Link
             href="/admin/orders"
-            className="rounded-full border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-black"
+            className="rounded-[24px] border border-black/10 bg-white p-5 transition hover:border-black"
           >
-            Orders
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-black">
+              Orders
+            </div>
+
+            <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-black">
+              Fulfillment
+            </div>
+
+            <p className="mt-2 text-sm text-neutral-600">
+              Track customer purchases and payouts.
+            </p>
           </Link>
 
           <Link
             href="/admin/vendors"
-            className="rounded-full border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-black"
+            className="rounded-[24px] border border-black/10 bg-white p-5 transition hover:border-black"
           >
-            Vendors
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-black">
+              Vendors
+            </div>
+
+            <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-black">
+              Accounts
+            </div>
+
+            <p className="mt-2 text-sm text-neutral-600">
+              Manage vendors and Stripe onboarding.
+            </p>
           </Link>
         </div>
       </section>
