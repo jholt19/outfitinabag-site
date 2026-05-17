@@ -1,5 +1,7 @@
 import Link from "next/link";
+
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,8 @@ function fmtDate(date: Date) {
 }
 
 export default async function AdminOrdersPage() {
+  await requireAdmin();
+
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     take: 50,
@@ -68,6 +72,7 @@ export default async function AdminOrdersPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Gross Sales
           </div>
+
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(totalRevenue)}
           </div>
@@ -77,6 +82,7 @@ export default async function AdminOrdersPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Platform Fees
           </div>
+
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(totalPlatformFees)}
           </div>
@@ -86,6 +92,7 @@ export default async function AdminOrdersPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Vendor Payouts
           </div>
+
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(totalVendorPayouts)}
           </div>
@@ -96,6 +103,7 @@ export default async function AdminOrdersPage() {
         {orders.length === 0 ? (
           <div className="rounded-[24px] border border-black/10 bg-white p-6">
             <p className="m-0 font-semibold text-black">No orders yet.</p>
+
             <p className="mt-2 text-sm text-neutral-600">
               Orders will appear here once customers complete checkout.
             </p>
@@ -144,6 +152,7 @@ export default async function AdminOrdersPage() {
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                       Total Paid
                     </div>
+
                     <div className="mt-2 text-lg font-semibold text-black">
                       {fmtCents(order.amountTotal)}
                     </div>
@@ -153,6 +162,7 @@ export default async function AdminOrdersPage() {
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                       Platform Fee
                     </div>
+
                     <div className="mt-2 text-lg font-semibold text-black">
                       {fmtCents(order.platformFeeCents)}
                     </div>
@@ -162,6 +172,7 @@ export default async function AdminOrdersPage() {
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                       Vendor Payout
                     </div>
+
                     <div className="mt-2 text-lg font-semibold text-black">
                       {fmtCents(order.vendorTotalCents)}
                     </div>
@@ -171,6 +182,7 @@ export default async function AdminOrdersPage() {
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                       Payout Status
                     </div>
+
                     <div className="mt-2 text-lg font-semibold text-black">
                       {order.payoutStatus}
                     </div>
