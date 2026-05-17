@@ -5,59 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function addBundleToCart(formData: FormData) {
-  const { userId } = await auth();
-  const bundleId = String(formData.get("bundleId") || "");
-
-  if (!userId) {
-    redirect("/account");
-  }
-
-  if (!bundleId) {
-    throw new Error("Missing bundle ID.");
-  }
-
-  const bundle = await prisma.bundle.findUnique({
-    where: { id: bundleId },
-    select: { id: true },
-  });
-
-  if (!bundle) {
-    throw new Error("Bundle not found.");
-  }
-
-  const cart = await prisma.cart.upsert({
-    where: { userId },
-    update: {},
-    create: { userId },
-  });
-
-  await prisma.cartItem.upsert({
-    where: {
-      cartId_bundleId: {
-        cartId: cart.id,
-        bundleId: bundle.id,
-      },
-    },
-    update: {
-      quantity: {
-        increment: 1,
-      },
-    },
-    create: {
-      cartId: cart.id,
-      bundleId: bundle.id,
-      quantity: 1,
-    },
-  });
-
-  revalidatePath("/bag");
-  revalidatePath("/outfits");
-  revalidatePath(`/outfits/${bundle.id}`);
-
-  redirect("/bag");
-}
-
 export async function removeCartItem(formData: FormData) {
   const { userId } = await auth();
   const cartItemId = String(formData.get("cartItemId") || "");
@@ -76,7 +23,6 @@ export async function removeCartItem(formData: FormData) {
   });
 
   revalidatePath("/bag");
-
   redirect("/bag");
 }
 
@@ -113,6 +59,5 @@ export async function updateCartItemQuantity(formData: FormData) {
   }
 
   revalidatePath("/bag");
-
   redirect("/bag");
 }
