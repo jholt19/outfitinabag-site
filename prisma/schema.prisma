@@ -52,11 +52,11 @@ model Order {
 
   payoutStatus String @default("PENDING")
 
-  gmvCents          Int @default(0)
-  platformFeeCents  Int @default(0)
-  vendorTotalCents  Int @default(0)
-  stripeFeeCents    Int @default(0)
-  netRevenueCents   Int @default(0)
+  gmvCents         Int @default(0)
+  platformFeeCents Int @default(0)
+  vendorTotalCents Int @default(0)
+  stripeFeeCents   Int @default(0)
+  netRevenueCents  Int @default(0)
 
   items OrderItem[]
 }
@@ -75,6 +75,7 @@ model OrderItem {
   vendorId          String
   vendorPayoutCents Int      @default(0)
   payoutStatus      String   @default("PENDING")
+  fulfillmentStatus String   @default("PENDING")
   paidAt            DateTime?
 
   bundle Bundle? @relation(fields: [bundleId], references: [id])
