@@ -1,10 +1,11 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 export async function requireAdmin() {
   const { userId } = await auth();
 
   if (!userId) {
-    throw new Error("Unauthorized");
+    redirect("/account");
   }
 
   const user = await currentUser();
@@ -14,12 +15,11 @@ export async function requireAdmin() {
 
   const admins =
     process.env.ADMIN_EMAILS?.split(",")
-      .map((x) => x.trim().toLowerCase()) || [];
+      .map((x) => x.trim().toLowerCase())
+      .filter(Boolean) || [];
 
-  const isAdmin = admins.includes(email);
-
-  if (!isAdmin) {
-    throw new Error("Unauthorized");
+  if (!admins.includes(email)) {
+    redirect("/account");
   }
 
   return {
