@@ -52,6 +52,10 @@ export default async function BagPage() {
     return sum + item.bundle.price * item.quantity;
   }, 0);
 
+  const totalItems = items.reduce((sum, item) => {
+    return sum + item.quantity;
+  }, 0);
+
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-5xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
@@ -87,7 +91,7 @@ export default async function BagPage() {
         </h1>
 
         <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
-          You have {items.length} item{items.length === 1 ? "" : "s"} ready for
+          You have {totalItems} item{totalItems === 1 ? "" : "s"} ready for
           checkout.
         </p>
       </section>
