@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
-import { removeCartItem, updateCartItemQuantity } from "@/app/cart/actions";
+import { removeCartItem } from "@/app/cart/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +146,8 @@ export default async function BagPage() {
                   </div>
 
                   <form
-                    action={updateCartItemQuantity}
+                    action="/api/cart/update"
+                    method="POST"
                     className="flex items-center gap-2"
                   >
                     <input type="hidden" name="cartItemId" value={item.id} />
