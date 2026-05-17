@@ -2,11 +2,41 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
+import { updateFulfillmentStatus } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+const FULFILLMENT_STATUSES = [
+  "PENDING",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+];
+
 function fmtCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function fulfillmentBadge(status: string) {
+  const styles =
+    status === "DELIVERED"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === "SHIPPED"
+        ? "border-blue-200 bg-blue-50 text-blue-700"
+        : status === "PROCESSING"
+          ? "border-purple-200 bg-purple-50 text-purple-700"
+          : status === "CANCELLED"
+            ? "border-red-200 bg-red-50 text-red-700"
+            : "border-amber-200 bg-amber-50 text-amber-700";
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${styles}`}
+    >
+      {status}
+    </span>
+  );
 }
 
 export default async function VendorOrdersPage() {
@@ -29,9 +59,7 @@ export default async function VendorOrdersPage() {
   }
 
   const vendor = await prisma.vendor.findFirst({
-    where: {
-      clerkUserId: userId,
-    },
+    where: { clerkUserId: userId },
   });
 
   if (!vendor) {
@@ -57,11 +85,9 @@ export default async function VendorOrdersPage() {
     );
   }
 
-  const vendorId = vendor.id;
-
   const items = await prisma.orderItem.findMany({
     where: {
-      vendorId,
+      vendorId: vendor.id,
       order: {
         is: {
           status: "paid",
@@ -78,6 +104,7 @@ export default async function VendorOrdersPage() {
       unitPrice: true,
       vendorPayoutCents: true,
       payoutStatus: true,
+      fulfillmentStatus: true,
       paidAt: true,
       createdAt: true,
       order: {
@@ -96,11 +123,8 @@ export default async function VendorOrdersPage() {
 
   for (const item of items) {
     const orderId = item.order?.id ?? "unknown";
-
     const arr = byOrder.get(orderId) ?? [];
-
     arr.push(item);
-
     byOrder.set(orderId, arr);
   }
 
@@ -109,17 +133,17 @@ export default async function VendorOrdersPage() {
       const order = orderItems[0]?.order;
 
       const payoutTotal = orderItems.reduce(
-        (sum, x) => sum + (x.vendorPayoutCents ?? 0),
+        (sum, item) => sum + (item.vendorPayoutCents ?? 0),
         0
       );
 
       const pending = orderItems
-        .filter((x) => x.payoutStatus !== "PAID")
-        .reduce((sum, x) => sum + (x.vendorPayoutCents ?? 0), 0);
+        .filter((item) => item.payoutStatus !== "PAID")
+        .reduce((sum, item) => sum + (item.vendorPayoutCents ?? 0), 0);
 
       const paid = orderItems
-        .filter((x) => x.payoutStatus === "PAID")
-        .reduce((sum, x) => sum + (x.vendorPayoutCents ?? 0), 0);
+        .filter((item) => item.payoutStatus === "PAID")
+        .reduce((sum, item) => sum + (item.vendorPayoutCents ?? 0), 0);
 
       return {
         orderId,
@@ -156,7 +180,7 @@ export default async function VendorOrdersPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Orders containing your bundles and payout tracking information.
+              Manage orders, fulfillment status, and payout tracking.
             </p>
           </div>
 
@@ -177,9 +201,9 @@ export default async function VendorOrdersPage() {
         </section>
       ) : (
         <section className="mt-8 grid gap-6">
-          {orders.map((o) => (
+          {orders.map((orderGroup) => (
             <article
-              key={o.orderId}
+              key={orderGroup.orderId}
               className="rounded-[28px] border border-black/10 bg-white p-6"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -189,17 +213,17 @@ export default async function VendorOrdersPage() {
                   </div>
 
                   <div className="mt-2 font-mono text-sm text-black">
-                    {o.orderId}
+                    {orderGroup.orderId}
                   </div>
 
                   <div className="mt-3 text-sm text-neutral-600">
-                    {o.order?.createdAt
-                      ? new Date(o.order.createdAt).toLocaleString()
+                    {orderGroup.order?.createdAt
+                      ? new Date(orderGroup.order.createdAt).toLocaleString()
                       : "—"}
                   </div>
 
                   <div className="mt-1 text-sm text-neutral-600">
-                    {o.order?.email ?? "Customer"}
+                    {orderGroup.order?.email ?? "Customer"}
                   </div>
                 </div>
 
@@ -209,21 +233,21 @@ export default async function VendorOrdersPage() {
                   </div>
 
                   <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-                    {fmtCents(o.payoutTotal)}
+                    {fmtCents(orderGroup.payoutTotal)}
                   </div>
 
                   <div className="mt-2 text-sm text-neutral-600">
-                    Pending: {fmtCents(o.pending)}
+                    Pending: {fmtCents(orderGroup.pending)}
                   </div>
 
                   <div className="text-sm text-neutral-600">
-                    Paid: {fmtCents(o.paid)}
+                    Paid: {fmtCents(orderGroup.paid)}
                   </div>
                 </div>
               </div>
 
               <div className="mt-6 space-y-4 border-t border-black/10 pt-6">
-                {o.orderItems.map((item) => (
+                {orderGroup.orderItems.map((item) => (
                   <div
                     key={item.id}
                     className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-4"
@@ -246,9 +270,13 @@ export default async function VendorOrdersPage() {
                           Vendor Payout:{" "}
                           {fmtCents(item.vendorPayoutCents ?? 0)}
                         </div>
+
+                        <div className="mt-4">
+                          {fulfillmentBadge(item.fulfillmentStatus)}
+                        </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="min-w-[230px] text-right">
                         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-black">
                           {item.payoutStatus === "PAID"
                             ? "PAID ✅"
@@ -262,6 +290,36 @@ export default async function VendorOrdersPage() {
                               ).toLocaleDateString()}`
                             : ""}
                         </div>
+
+                        <form
+                          action={updateFulfillmentStatus}
+                          className="mt-4 grid gap-2"
+                        >
+                          <input
+                            type="hidden"
+                            name="orderItemId"
+                            value={item.id}
+                          />
+
+                          <select
+                            name="fulfillmentStatus"
+                            defaultValue={item.fulfillmentStatus}
+                            className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-black"
+                          >
+                            {FULFILLMENT_STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="submit"
+                            className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                          >
+                            Update Fulfillment
+                          </button>
+                        </form>
                       </div>
                     </div>
                   </div>
