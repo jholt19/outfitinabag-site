@@ -65,6 +65,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [bagCount, setBagCount] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -100,6 +101,24 @@ export default function Layout({ children }: LayoutProps) {
 
     loadCartCount();
   }, [isSignedIn, pathname]);
+
+  useEffect(() => {
+    async function loadAdminStatus() {
+      try {
+        const response = await fetch("/api/admin/check", {
+          cache: "no-store",
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        setIsAdmin(Boolean(data?.isAdmin));
+      } catch {
+        setIsAdmin(false);
+      }
+    }
+
+    loadAdminStatus();
+  }, [pathname]);
 
   const bagLabel = `Bag (${bagCount})`;
 
@@ -155,14 +174,15 @@ export default function Layout({ children }: LayoutProps) {
                 />
               ))}
 
-              {adminLinks.map((item) => (
-                <NavLink
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  pathname={pathname}
-                />
-              ))}
+              {isAdmin &&
+                adminLinks.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    pathname={pathname}
+                  />
+                ))}
 
               {!isSignedIn && (
                 <div className="flex items-center gap-2">
@@ -327,24 +347,26 @@ export default function Layout({ children }: LayoutProps) {
                 </div>
               </section>
 
-              <section>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
-                  Admin
-                </h3>
+              {isAdmin && (
+                <section>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                    Admin
+                  </h3>
 
-                <div className="space-y-4 text-lg">
-                  {adminLinks.map((item) => (
-                    <div key={item.href}>
-                      <NavLink
-                        href={item.href}
-                        label={item.label}
-                        pathname={pathname}
-                        onClick={() => setMenuOpen(false)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
+                  <div className="space-y-4 text-lg">
+                    {adminLinks.map((item) => (
+                      <div key={item.href}>
+                        <NavLink
+                          href={item.href}
+                          label={item.label}
+                          pathname={pathname}
+                          onClick={() => setMenuOpen(false)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           </aside>
         </>
