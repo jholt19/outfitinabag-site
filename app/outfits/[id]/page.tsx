@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 import { toggleSavedOutfit } from "./actions";
-import { addBundleToCart } from "@/app/cart/actions";
+
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +113,7 @@ export default async function OutfitPage({
 
           <div className="mt-10 grid gap-3">
             {userId ? (
-              <form action={addBundleToCart}>
+              <form action="/api/cart/add" method="POST">
                 <input type="hidden" name="bundleId" value={bundle.id} />
 
                 <button
