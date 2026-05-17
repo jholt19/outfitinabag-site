@@ -5,7 +5,7 @@ export async function requireAdmin() {
   const { userId } = await auth();
 
   if (!userId) {
-    redirect("/account");
+    redirect("/");
   }
 
   const user = await currentUser();
@@ -19,7 +19,7 @@ export async function requireAdmin() {
       .filter(Boolean) || [];
 
   if (!admins.includes(email)) {
-    redirect("/account");
+    redirect("/");
   }
 
   return {
