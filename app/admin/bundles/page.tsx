@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
+
 import { toggleBundleFeatured, toggleBundlePublished } from "./actions/toggle";
 import { updateBundleTitle } from "./actions/updateTitle";
 import { updateBundleImage } from "./actions/updateImage";
@@ -10,6 +12,8 @@ import { uploadCloudinaryImage } from "./actions/uploadCloudinaryImage";
 export const dynamic = "force-dynamic";
 
 export default async function AdminBundlesPage() {
+  await requireAdmin();
+
   const bundles = await prisma.bundle.findMany({
     orderBy: { createdAt: "desc" },
     include: { vendor: true },
@@ -95,7 +99,6 @@ export default async function AdminBundlesPage() {
                 </div>
               </div>
 
-              {/* ✅ IMAGE PREVIEW FIX */}
               {b.image && (
                 <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
                   <div className="text-sm font-semibold text-black">
@@ -124,12 +127,17 @@ export default async function AdminBundlesPage() {
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <form action={updateBundleTitle} className="grid gap-2">
                   <input type="hidden" name="bundleId" value={b.id} />
-                  <label className="text-sm font-semibold text-black">Title</label>
+
+                  <label className="text-sm font-semibold text-black">
+                    Title
+                  </label>
+
                   <input
                     name="title"
                     defaultValue={b.title}
                     className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
                   />
+
                   <button
                     type="submit"
                     className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
@@ -140,15 +148,18 @@ export default async function AdminBundlesPage() {
 
                 <form action={updateBundleImage} className="grid gap-2">
                   <input type="hidden" name="bundleId" value={b.id} />
+
                   <label className="text-sm font-semibold text-black">
                     Manual Image URL / Path
                   </label>
+
                   <input
                     name="image"
                     defaultValue={b.image ?? ""}
                     placeholder="/outfits/for-1.jpg or https://..."
                     className="rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm"
                   />
+
                   <button
                     type="submit"
                     className="rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black"
@@ -163,15 +174,18 @@ export default async function AdminBundlesPage() {
                 className="mt-6 grid gap-2 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4"
               >
                 <input type="hidden" name="bundleId" value={b.id} />
+
                 <label className="text-sm font-semibold text-black">
                   Upload Image to Cloudinary
                 </label>
+
                 <input
                   name="imageUrl"
                   required
                   placeholder="Paste image URL here"
                   className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm"
                 />
+
                 <button
                   type="submit"
                   className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white"
@@ -184,6 +198,7 @@ export default async function AdminBundlesPage() {
                 {b.submittedForReview && !b.published && (
                   <form action={approveBundle}>
                     <input type="hidden" name="bundleId" value={b.id} />
+
                     <button className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white">
                       Approve Bundle
                     </button>
@@ -192,6 +207,7 @@ export default async function AdminBundlesPage() {
 
                 <form action={toggleBundlePublished}>
                   <input type="hidden" name="bundleId" value={b.id} />
+
                   <button className="rounded-full border border-black/15 px-5 py-3 text-sm">
                     {b.published ? "Unpublish" : "Publish"}
                   </button>
@@ -199,6 +215,7 @@ export default async function AdminBundlesPage() {
 
                 <form action={toggleBundleFeatured}>
                   <input type="hidden" name="bundleId" value={b.id} />
+
                   <button className="rounded-full border border-black/15 px-5 py-3 text-sm">
                     {b.isFeatured ? "Remove Feature" : "Feature Bundle"}
                   </button>
