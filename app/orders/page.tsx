@@ -10,6 +10,27 @@ function fmtCents(cents: number | null | undefined) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+function fulfillmentBadge(status: string) {
+  const styles =
+    status === "DELIVERED"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === "SHIPPED"
+        ? "border-blue-200 bg-blue-50 text-blue-700"
+        : status === "PROCESSING"
+          ? "border-purple-200 bg-purple-50 text-purple-700"
+          : status === "CANCELLED"
+            ? "border-red-200 bg-red-50 text-red-700"
+            : "border-amber-200 bg-amber-50 text-amber-700";
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${styles}`}
+    >
+      {status}
+    </span>
+  );
+}
+
 export default async function CustomerOrdersPage() {
   const { userId } = await auth();
 
@@ -98,7 +119,7 @@ export default async function CustomerOrdersPage() {
                   </div>
 
                   <div className="mt-1 text-sm text-neutral-600">
-                    Status: {order.status ?? "unknown"}
+                    Payment Status: {order.status ?? "unknown"}
                   </div>
                 </div>
 
@@ -132,8 +153,14 @@ export default async function CustomerOrdersPage() {
                     )}
 
                     <div>
-                      <div className="text-lg font-semibold text-black">
-                        {item.title}
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-lg font-semibold text-black">
+                          {item.title}
+                        </div>
+
+                        {fulfillmentBadge(
+                          item.fulfillmentStatus || "PENDING"
+                        )}
                       </div>
 
                       <div className="mt-2 text-sm text-neutral-600">
@@ -143,6 +170,35 @@ export default async function CustomerOrdersPage() {
                       <div className="mt-1 text-sm text-neutral-600">
                         Qty {item.quantity} • Unit {fmtCents(item.unitPrice)}
                       </div>
+
+                      <div className="mt-3 text-sm font-medium text-black">
+                        Tracking Status:{" "}
+                        {item.fulfillmentStatus || "PENDING"}
+                      </div>
+
+                      {item.fulfillmentStatus === "PROCESSING" && (
+                        <p className="mt-2 text-sm text-neutral-600">
+                          Your order is being prepared by the vendor.
+                        </p>
+                      )}
+
+                      {item.fulfillmentStatus === "SHIPPED" && (
+                        <p className="mt-2 text-sm text-neutral-600">
+                          Your order has shipped and is on the way.
+                        </p>
+                      )}
+
+                      {item.fulfillmentStatus === "DELIVERED" && (
+                        <p className="mt-2 text-sm text-neutral-600">
+                          Your order was delivered successfully.
+                        </p>
+                      )}
+
+                      {item.fulfillmentStatus === "CANCELLED" && (
+                        <p className="mt-2 text-sm text-neutral-600">
+                          This order item was cancelled.
+                        </p>
+                      )}
 
                       {item.bundleId ? (
                         <Link
