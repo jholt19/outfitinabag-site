@@ -87,9 +87,26 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: true,
         orderId: existingOrder.id,
+        orderNumber: existingOrder.orderNumber,
         message: "Order already saved. Bag cleared.",
       });
     }
+
+    const lastOrder = await prisma.order.findFirst({
+      where: {
+        orderNumber: {
+          not: null,
+        },
+      },
+      orderBy: {
+        orderNumber: "desc",
+      },
+      select: {
+        orderNumber: true,
+      },
+    });
+
+    const nextOrderNumber = (lastOrder?.orderNumber || 1000) + 1;
 
     const amountTotal = session.amount_total || 0;
     const platformFeeCents = Math.round(amountTotal * 0.2);
@@ -142,6 +159,7 @@ export async function POST(req: Request) {
 
     const order = await prisma.order.create({
       data: {
+        orderNumber: nextOrderNumber,
         stripeSessionId: session.id,
         stripePaymentId: paymentIntent,
         email: session.customer_details?.email || session.customer_email || null,
@@ -183,6 +201,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       orderId: order.id,
+      orderNumber: order.orderNumber,
       items: order.items.length,
       message:
         checkoutType === "cart"
