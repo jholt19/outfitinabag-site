@@ -54,23 +54,22 @@ export default async function CustomerOrdersPage() {
   const email = user?.emailAddresses?.[0]?.emailAddress ?? "";
 
   const orders = await prisma.order.findMany({
-  where: {
-    OR: [
-      { clerkUserId: userId },
-      ...(email ? [{ email }] : []),
-    ],
-  },
-  orderBy: { createdAt: "desc" },
-  include: {
-          items: {
-            include: {
-              bundle: true,
-              vendor: true,
-            },
-          },
+    where: {
+      OR: [
+        { clerkUserId: userId },
+        ...(email ? [{ email }] : []),
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      items: {
+        include: {
+          bundle: true,
+          vendor: true,
         },
-      })
-    : [];
+      },
+    },
+  });
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
@@ -139,82 +138,83 @@ export default async function CustomerOrdersPage() {
               </div>
 
               <div className="mt-6 grid gap-4 border-t border-black/10 pt-6">
-                {order.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="grid gap-4 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4 sm:grid-cols-[110px_1fr]"
-                  >
-                    {item.image || item.bundle?.image ? (
-                      <img
-                        src={item.image || item.bundle?.image || ""}
-                        alt={item.title}
-                        className="h-[130px] w-full rounded-xl object-cover sm:h-full"
-                      />
-                    ) : (
-                      <div className="flex h-[130px] items-center justify-center rounded-xl bg-white text-neutral-400">
-                        No image
-                      </div>
-                    )}
+                {order.items.map((item) => {
+                  const status = item.fulfillmentStatus || "PENDING";
 
-                    <div>
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="text-lg font-semibold text-black">
-                          {item.title}
+                  return (
+                    <div
+                      key={item.id}
+                      className="grid gap-4 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4 sm:grid-cols-[110px_1fr]"
+                    >
+                      {item.image || item.bundle?.image ? (
+                        <img
+                          src={item.image || item.bundle?.image || ""}
+                          alt={item.title}
+                          className="h-[130px] w-full rounded-xl object-cover sm:h-full"
+                        />
+                      ) : (
+                        <div className="flex h-[130px] items-center justify-center rounded-xl bg-white text-neutral-400">
+                          No image
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="text-lg font-semibold text-black">
+                            {item.title}
+                          </div>
+
+                          {fulfillmentBadge(status)}
                         </div>
 
-                        {fulfillmentBadge(
-                          item.fulfillmentStatus || "PENDING"
+                        <div className="mt-2 text-sm text-neutral-600">
+                          Vendor: {item.vendor?.name ?? "OutfitInABag"}
+                        </div>
+
+                        <div className="mt-1 text-sm text-neutral-600">
+                          Qty {item.quantity} • Unit {fmtCents(item.unitPrice)}
+                        </div>
+
+                        <div className="mt-3 text-sm font-medium text-black">
+                          Tracking Status: {status}
+                        </div>
+
+                        {status === "PROCESSING" && (
+                          <p className="mt-2 text-sm text-neutral-600">
+                            Your order is being prepared by the vendor.
+                          </p>
                         )}
+
+                        {status === "SHIPPED" && (
+                          <p className="mt-2 text-sm text-neutral-600">
+                            Your order has shipped and is on the way.
+                          </p>
+                        )}
+
+                        {status === "DELIVERED" && (
+                          <p className="mt-2 text-sm text-neutral-600">
+                            Your order was delivered successfully.
+                          </p>
+                        )}
+
+                        {status === "CANCELLED" && (
+                          <p className="mt-2 text-sm text-neutral-600">
+                            This order item was cancelled.
+                          </p>
+                        )}
+
+                        {item.bundleId ? (
+                          <Link
+                            href={`/outfits/${item.bundleId}`}
+                            className="mt-4 inline-flex rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black transition hover:border-black"
+                          >
+                            View Outfit
+                          </Link>
+                        ) : null}
                       </div>
-
-                      <div className="mt-2 text-sm text-neutral-600">
-                        Vendor: {item.vendor?.name ?? "OutfitInABag"}
-                      </div>
-
-                      <div className="mt-1 text-sm text-neutral-600">
-                        Qty {item.quantity} • Unit {fmtCents(item.unitPrice)}
-                      </div>
-
-                      <div className="mt-3 text-sm font-medium text-black">
-                        Tracking Status:{" "}
-                        {item.fulfillmentStatus || "PENDING"}
-                      </div>
-
-                      {item.fulfillmentStatus === "PROCESSING" && (
-                        <p className="mt-2 text-sm text-neutral-600">
-                          Your order is being prepared by the vendor.
-                        </p>
-                      )}
-
-                      {item.fulfillmentStatus === "SHIPPED" && (
-                        <p className="mt-2 text-sm text-neutral-600">
-                          Your order has shipped and is on the way.
-                        </p>
-                      )}
-
-                      {item.fulfillmentStatus === "DELIVERED" && (
-                        <p className="mt-2 text-sm text-neutral-600">
-                          Your order was delivered successfully.
-                        </p>
-                      )}
-
-                      {item.fulfillmentStatus === "CANCELLED" && (
-                        <p className="mt-2 text-sm text-neutral-600">
-                          This order item was cancelled.
-                        </p>
-                      )}
-
-                      {item.bundleId ? (
-                        <Link
-                          href={`/outfits/${item.bundleId}`}
-                          className="mt-4 inline-flex rounded-full border border-black/15 bg-white px-5 py-2 text-sm font-semibold text-black transition hover:border-black"
-                        >
-                          View Outfit
-                        </Link>
-                      ) : null}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </article>
           ))}
