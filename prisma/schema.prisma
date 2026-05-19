@@ -35,6 +35,7 @@ model Bundle {
 
 model Order {
   id              String   @id @default(cuid())
+  orderNumber Int? @unique
   stripeSessionId String   @unique
   stripePaymentId String?
   email           String?
