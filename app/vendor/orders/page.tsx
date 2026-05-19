@@ -105,6 +105,8 @@ export default async function VendorOrdersPage() {
       vendorPayoutCents: true,
       payoutStatus: true,
       fulfillmentStatus: true,
+      trackingNumber: true,
+      trackingCarrier: true,
       paidAt: true,
       createdAt: true,
       order: {
@@ -180,7 +182,8 @@ export default async function VendorOrdersPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Manage orders, fulfillment status, and payout tracking.
+              Manage orders, fulfillment status, tracking numbers, and payout
+              information.
             </p>
           </div>
 
@@ -274,9 +277,22 @@ export default async function VendorOrdersPage() {
                         <div className="mt-4">
                           {fulfillmentBadge(item.fulfillmentStatus)}
                         </div>
+
+                        {item.trackingNumber ? (
+                          <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4">
+                            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                              Tracking
+                            </div>
+
+                            <div className="mt-2 text-sm font-semibold text-black">
+                              {item.trackingCarrier || "Carrier"} —{" "}
+                              {item.trackingNumber}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
 
-                      <div className="min-w-[230px] text-right">
+                      <div className="min-w-[260px] text-right">
                         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-black">
                           {item.payoutStatus === "PAID"
                             ? "PAID ✅"
@@ -293,13 +309,17 @@ export default async function VendorOrdersPage() {
 
                         <form
                           action={updateFulfillmentStatus}
-                          className="mt-4 grid gap-2"
+                          className="mt-4 grid gap-2 text-left"
                         >
                           <input
                             type="hidden"
                             name="orderItemId"
                             value={item.id}
                           />
+
+                          <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                            Fulfillment Status
+                          </label>
 
                           <select
                             name="fulfillmentStatus"
@@ -313,9 +333,31 @@ export default async function VendorOrdersPage() {
                             ))}
                           </select>
 
+                          <label className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                            Carrier
+                          </label>
+
+                          <input
+                            name="trackingCarrier"
+                            defaultValue={item.trackingCarrier ?? ""}
+                            placeholder="USPS, UPS, FedEx"
+                            className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm text-black"
+                          />
+
+                          <label className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                            Tracking Number
+                          </label>
+
+                          <input
+                            name="trackingNumber"
+                            defaultValue={item.trackingNumber ?? ""}
+                            placeholder="Enter tracking number"
+                            className="rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm text-black"
+                          />
+
                           <button
                             type="submit"
-                            className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                            className="mt-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
                           >
                             Update Fulfillment
                           </button>
