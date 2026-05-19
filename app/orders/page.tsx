@@ -114,7 +114,7 @@ export default async function CustomerOrdersPage() {
                   </div>
 
                   <div className="mt-2 font-mono text-sm text-black">
-                    {order.id}
+                    OIAB-{order.orderNumber ?? "—"}
                   </div>
 
                   <div className="mt-3 text-sm text-neutral-600">
