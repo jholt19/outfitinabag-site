@@ -58,6 +58,17 @@ export async function POST(req: Request) {
     });
 
     if (existingOrder) {
+      if (userId && !existingOrder.clerkUserId) {
+        await prisma.order.update({
+          where: {
+            id: existingOrder.id,
+          },
+          data: {
+            clerkUserId: userId,
+          },
+        });
+      }
+
       if (clearCart && checkoutType === "cart" && cartId) {
         await prisma.cartItem.deleteMany({
           where: {
@@ -125,6 +136,7 @@ export async function POST(req: Request) {
         vendorId: itemVendorId,
         vendorPayoutCents: Math.round(total * 0.8),
         payoutStatus: "PENDING",
+        fulfillmentStatus: "PENDING",
       };
     });
 
@@ -133,6 +145,7 @@ export async function POST(req: Request) {
         stripeSessionId: session.id,
         stripePaymentId: paymentIntent,
         email: session.customer_details?.email || session.customer_email || null,
+        clerkUserId: userId || null,
         amountTotal,
         currency: session.currency || "usd",
         status: session.payment_status || "unknown",
