@@ -77,6 +77,8 @@ model OrderItem {
   vendorPayoutCents Int      @default(0)
   payoutStatus      String   @default("PENDING")
   fulfillmentStatus String   @default("PENDING")
+  trackingNumber String?
+trackingCarrier String?
   paidAt            DateTime?
 
   bundle Bundle? @relation(fields: [bundleId], references: [id])
