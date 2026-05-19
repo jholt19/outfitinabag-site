@@ -175,32 +175,71 @@ export default async function CustomerOrdersPage() {
                           Qty {item.quantity} • Unit {fmtCents(item.unitPrice)}
                         </div>
 
-                        <div className="mt-3 text-sm font-medium text-black">
-                          Tracking Status: {status}
+                        <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4">
+                          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                            Fulfillment Status
+                          </div>
+
+                          <div className="mt-2">
+                            {fulfillmentBadge(status)}
+                          </div>
+
+                          {status === "PROCESSING" && (
+                            <p className="mt-3 text-sm text-neutral-600">
+                              Your order is currently being prepared by the
+                              vendor.
+                            </p>
+                          )}
+
+                          {status === "SHIPPED" && (
+                            <p className="mt-3 text-sm text-neutral-600">
+                              Your package has shipped and is currently in
+                              transit.
+                            </p>
+                          )}
+
+                          {status === "DELIVERED" && (
+                            <p className="mt-3 text-sm text-neutral-600">
+                              Your package has been delivered successfully.
+                            </p>
+                          )}
+
+                          {status === "CANCELLED" && (
+                            <p className="mt-3 text-sm text-neutral-600">
+                              This order item was cancelled.
+                            </p>
+                          )}
                         </div>
 
-                        {status === "PROCESSING" && (
-                          <p className="mt-2 text-sm text-neutral-600">
-                            Your order is being prepared by the vendor.
-                          </p>
-                        )}
+                        {(item.trackingCarrier || item.trackingNumber) && (
+                          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+                              Shipping Tracking
+                            </div>
 
-                        {status === "SHIPPED" && (
-                          <p className="mt-2 text-sm text-neutral-600">
-                            Your order has shipped and is on the way.
-                          </p>
-                        )}
+                            {item.trackingCarrier && (
+                              <div className="mt-2 text-sm text-black">
+                                <span className="font-semibold">Carrier:</span>{" "}
+                                {item.trackingCarrier}
+                              </div>
+                            )}
 
-                        {status === "DELIVERED" && (
-                          <p className="mt-2 text-sm text-neutral-600">
-                            Your order was delivered successfully.
-                          </p>
-                        )}
+                            {item.trackingNumber && (
+                              <div className="mt-1 text-sm text-black">
+                                <span className="font-semibold">
+                                  Tracking #:
+                                </span>{" "}
+                                {item.trackingNumber}
+                              </div>
+                            )}
 
-                        {status === "CANCELLED" && (
-                          <p className="mt-2 text-sm text-neutral-600">
-                            This order item was cancelled.
-                          </p>
+                            {status === "SHIPPED" && (
+                              <p className="mt-3 text-sm text-blue-700">
+                                Your tracking information was provided by the
+                                vendor.
+                              </p>
+                            )}
+                          </div>
                         )}
 
                         {item.bundleId ? (
