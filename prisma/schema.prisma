@@ -38,6 +38,7 @@ model Order {
   stripeSessionId String   @unique
   stripePaymentId String?
   email           String?
+  clerkUserId String?
   amountTotal     Int?
   currency        String?
   status          String?
