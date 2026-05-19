@@ -53,11 +53,15 @@ export default async function CustomerOrdersPage() {
   const user = await currentUser();
   const email = user?.emailAddresses?.[0]?.emailAddress ?? "";
 
-  const orders = email
-    ? await prisma.order.findMany({
-        where: { email },
-        orderBy: { createdAt: "desc" },
-        include: {
+  const orders = await prisma.order.findMany({
+  where: {
+    OR: [
+      { clerkUserId: userId },
+      ...(email ? [{ email }] : []),
+    ],
+  },
+  orderBy: { createdAt: "desc" },
+  include: {
           items: {
             include: {
               bundle: true,
