@@ -21,6 +21,8 @@ export async function updateFulfillmentStatus(formData: FormData) {
 
   const orderItemId = String(formData.get("orderItemId") || "");
   const fulfillmentStatus = String(formData.get("fulfillmentStatus") || "");
+  const trackingNumber = String(formData.get("trackingNumber") || "").trim();
+  const trackingCarrier = String(formData.get("trackingCarrier") || "").trim();
 
   if (!orderItemId || !ALLOWED_STATUSES.includes(fulfillmentStatus)) {
     throw new Error("Invalid fulfillment status.");
@@ -42,9 +44,12 @@ export async function updateFulfillmentStatus(formData: FormData) {
     },
     data: {
       fulfillmentStatus,
+      trackingNumber: trackingNumber || null,
+      trackingCarrier: trackingCarrier || null,
     },
   });
 
   revalidatePath("/vendor/orders");
+  revalidatePath("/orders");
   revalidatePath("/admin/orders");
 }
