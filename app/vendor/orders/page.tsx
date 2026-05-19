@@ -111,6 +111,7 @@ export default async function VendorOrdersPage() {
       order: {
         select: {
           id: true,
+          orderNumber: true,
           createdAt: true,
           email: true,
           amountTotal: true,
@@ -215,7 +216,7 @@ export default async function VendorOrdersPage() {
                   </div>
 
                   <div className="mt-2 font-mono text-sm text-black">
-                    {orderGroup.orderId}
+                    OIAB-{orderGroup.order?.orderNumber ?? "—"}
                   </div>
 
                   <div className="mt-3 text-sm text-neutral-600">
@@ -296,14 +297,6 @@ export default async function VendorOrdersPage() {
                           {item.payoutStatus === "PAID"
                             ? "PAID ✅"
                             : "PENDING ⏳"}
-                        </div>
-
-                        <div className="mt-2 text-xs text-neutral-500">
-                          {item.paidAt
-                            ? `Paid: ${new Date(
-                                item.paidAt
-                              ).toLocaleDateString()}`
-                            : ""}
                         </div>
 
                         <form
