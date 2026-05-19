@@ -2,7 +2,6 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
-import { updateFulfillmentStatus } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -308,7 +307,8 @@ export default async function VendorOrdersPage() {
                         </div>
 
                         <form
-                          action={updateFulfillmentStatus}
+                          action="/api/vendor/orders/update"
+                          method="POST"
                           className="mt-4 grid gap-2 text-left"
                         >
                           <input

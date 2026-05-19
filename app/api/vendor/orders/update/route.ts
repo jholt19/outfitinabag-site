@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 
@@ -12,73 +12,43 @@ const ALLOWED_STATUSES = [
 ];
 
 export async function POST(req: Request) {
-  try {
-    const { userId } = await auth();
+  const { userId } = await auth();
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await req.json();
-
-    const orderItemId = String(body.orderItemId || "");
-    const fulfillmentStatus = String(body.fulfillmentStatus || "");
-    const trackingCarrier = String(body.trackingCarrier || "").trim();
-    const trackingNumber = String(body.trackingNumber || "").trim();
-
-    if (
-      !orderItemId ||
-      !ALLOWED_STATUSES.includes(fulfillmentStatus)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid request" },
-        { status: 400 }
-      );
-    }
-
-    const vendor = await prisma.vendor.findFirst({
-      where: {
-        clerkUserId: userId,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!vendor) {
-      return NextResponse.json(
-        { error: "Vendor not found" },
-        { status: 404 }
-      );
-    }
-
-    await prisma.orderItem.updateMany({
-      where: {
-        id: orderItemId,
-        vendorId: vendor.id,
-      },
-      data: {
-        fulfillmentStatus,
-        trackingCarrier: trackingCarrier || null,
-        trackingNumber: trackingNumber || null,
-      },
-    });
-
-    return NextResponse.json({
-      ok: true,
-    });
-  } catch (error: any) {
-    console.error("vendor update order error:", error);
-
-    return NextResponse.json(
-      {
-        error: "Failed to update order",
-        details: error?.message || String(error),
-      },
-      { status: 500 }
-    );
+  if (!userId) {
+    redirect("/account");
   }
+
+  const formData = await req.formData();
+
+  const orderItemId = String(formData.get("orderItemId") || "");
+  const fulfillmentStatus = String(formData.get("fulfillmentStatus") || "");
+  const trackingCarrier = String(formData.get("trackingCarrier") || "").trim();
+  const trackingNumber = String(formData.get("trackingNumber") || "").trim();
+
+  if (!orderItemId || !ALLOWED_STATUSES.includes(fulfillmentStatus)) {
+    redirect("/vendor/orders");
+  }
+
+  const vendor = await prisma.vendor.findFirst({
+    where: { clerkUserId: userId },
+    select: { id: true },
+  });
+
+  if (!vendor) {
+    redirect("/vendor/claim");
+  }
+
+  await prisma.orderItem.updateMany({
+    where: {
+      id: orderItemId,
+      vendorId: vendor.id,
+    },
+    data: {
+      fulfillmentStatus,
+      trackingCarrier: trackingCarrier || null,
+      trackingNumber: trackingNumber || null,
+    },
+  });
+
+  redirect("/vendor/orders");
 }
