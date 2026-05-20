@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 
@@ -38,9 +38,14 @@ export async function GET(req: Request) {
 
     const baseUrl = getBaseUrl();
 
-    if (cartCheckout) {
-      const { userId } = await auth();
+    const { userId } = await auth();
 
+    const user = await currentUser();
+
+    const userEmail =
+      user?.emailAddresses?.[0]?.emailAddress || undefined;
+
+    if (cartCheckout) {
       if (!userId) {
         return Response.redirect(`${baseUrl}/account`, 303);
       }
@@ -106,9 +111,14 @@ export async function GET(req: Request) {
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "payment",
         payment_method_types: ["card"],
+
+        customer_email: userEmail,
+
         line_items,
+
         success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/bag`,
+
         metadata: {
           checkoutType: "cart",
           cartId: cart?.id ?? "",
@@ -177,7 +187,11 @@ export async function GET(req: Request) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+
       payment_method_types: ["card"],
+
+      customer_email: userEmail,
+
       line_items: [
         {
           quantity: 1,
@@ -198,6 +212,7 @@ export async function GET(req: Request) {
           },
         },
       ],
+
       payment_intent_data: {
         application_fee_amount: platformFeeCents,
         transfer_data: {
@@ -210,6 +225,7 @@ export async function GET(req: Request) {
           platformFeeCents: String(platformFeeCents),
         },
       },
+
       metadata: {
         checkoutType: "single",
         bundleId: bundle.id,
@@ -217,7 +233,9 @@ export async function GET(req: Request) {
         platformFeeCents: String(platformFeeCents),
         stripeConnectDestination: bundle.vendor.stripeAccountId,
       },
+
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+
       cancel_url: `${baseUrl}/bag`,
     });
 
