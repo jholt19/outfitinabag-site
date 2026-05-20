@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+
 import { prisma } from "@/lib/prisma";
+import { sendOrderConfirmationEmail } from "@/lib/emails";
 
 export const runtime = "nodejs";
 
@@ -22,6 +24,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null);
+
     const session_id = body?.session_id;
     const clearCart = Boolean(body?.clear_cart);
 
@@ -162,7 +165,10 @@ export async function POST(req: Request) {
         orderNumber: nextOrderNumber,
         stripeSessionId: session.id,
         stripePaymentId: paymentIntent,
-        email: session.customer_details?.email || session.customer_email || null,
+        email:
+          session.customer_details?.email ||
+          session.customer_email ||
+          null,
         clerkUserId: userId || null,
         amountTotal,
         currency: session.currency || "usd",
@@ -196,6 +202,18 @@ export async function POST(req: Request) {
             : {}),
         },
       });
+    }
+
+    if (order.email) {
+      try {
+        await sendOrderConfirmationEmail({
+          to: order.email,
+          orderNumber: `OIAB-${order.orderNumber}`,
+          total: `$${((order.amountTotal || 0) / 100).toFixed(2)}`,
+        });
+      } catch (emailError) {
+        console.error("Order email failed:", emailError);
+      }
     }
 
     return NextResponse.json({
