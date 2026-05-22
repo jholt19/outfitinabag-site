@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import VendorPicker from "./VendorPicker";
 import { submitBundleForReview } from "../bundles/actions/submitForReview";
+import { updateBundleInventory } from "./actions/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -125,8 +126,7 @@ export default async function VendorDashboardPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Manage bundles, monitor payouts, track sales, and grow your
-              storefront.
+              Manage bundles, inventory, payouts, sales, and your storefront.
             </p>
           </div>
 
@@ -244,7 +244,7 @@ export default async function VendorDashboardPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                Bundles
+                Bundles & Inventory
               </div>
 
               <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
@@ -269,6 +269,11 @@ export default async function VendorDashboardPage() {
                   : bundle.submittedForReview
                     ? "Awaiting Review"
                     : "Draft";
+
+                const isSoldOut = bundle.stock <= 0;
+                const isLowStock =
+                  bundle.stock > 0 &&
+                  bundle.stock <= bundle.lowStockThreshold;
 
                 return (
                   <div
@@ -298,6 +303,20 @@ export default async function VendorDashboardPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
+                        {isSoldOut ? (
+                          <span className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+                            Sold Out
+                          </span>
+                        ) : isLowStock ? (
+                          <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                            Low Stock
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                            In Stock
+                          </span>
+                        )}
+
                         {!bundle.published && !bundle.submittedForReview ? (
                           <form action={submitBundleForReview}>
                             <input
@@ -320,6 +339,73 @@ export default async function VendorDashboardPage() {
                           </form>
                         ) : null}
                       </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                        Inventory
+                      </div>
+
+                      <div className="mt-2 text-sm text-neutral-600">
+                        Current Stock:{" "}
+                        <strong
+                          className={
+                            isSoldOut
+                              ? "text-red-600"
+                              : isLowStock
+                                ? "text-amber-600"
+                                : "text-black"
+                          }
+                        >
+                          {bundle.stock}
+                        </strong>
+                      </div>
+
+                      <form
+                        action={updateBundleInventory}
+                        className="mt-4 grid gap-3"
+                      >
+                        <input
+                          type="hidden"
+                          name="bundleId"
+                          value={bundle.id}
+                        />
+
+                        <div>
+                          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                            Stock Quantity
+                          </label>
+
+                          <input
+                            type="number"
+                            name="stock"
+                            min="0"
+                            defaultValue={bundle.stock}
+                            className="mt-1 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                            Low Stock Alert
+                          </label>
+
+                          <input
+                            type="number"
+                            name="lowStockThreshold"
+                            min="0"
+                            defaultValue={bundle.lowStockThreshold}
+                            className="mt-1 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                        >
+                          Update Inventory
+                        </button>
+                      </form>
                     </div>
                   </div>
                 );
