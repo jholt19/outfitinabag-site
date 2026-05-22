@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Bundle" ADD COLUMN     "lowStockThreshold" INTEGER NOT NULL DEFAULT 5,
+ADD COLUMN     "stock" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "VendorOutfit" ADD COLUMN     "lowStockThreshold" INTEGER NOT NULL DEFAULT 5,
+ADD COLUMN     "stock" INTEGER NOT NULL DEFAULT 0;

@@ -22,6 +22,8 @@ model Bundle {
   isActive           Boolean     @default(true)
   published          Boolean     @default(false)
   isFeatured         Boolean     @default(false)
+  stock              Int         @default(0)
+  lowStockThreshold  Int         @default(5)
   createdAt          DateTime    @default(now())
 
   vendor       Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
@@ -35,11 +37,11 @@ model Bundle {
 
 model Order {
   id              String   @id @default(cuid())
-  orderNumber Int? @unique
+  orderNumber     Int?     @unique
   stripeSessionId String   @unique
   stripePaymentId String?
   email           String?
-  clerkUserId String?
+  clerkUserId     String?
   amountTotal     Int?
   currency        String?
   status          String?
@@ -78,8 +80,8 @@ model OrderItem {
   vendorPayoutCents Int      @default(0)
   payoutStatus      String   @default("PENDING")
   fulfillmentStatus String   @default("PENDING")
-  trackingNumber String?
-trackingCarrier String?
+  trackingNumber    String?
+  trackingCarrier   String?
   paidAt            DateTime?
 
   bundle Bundle? @relation(fields: [bundleId], references: [id])
@@ -92,11 +94,11 @@ trackingCarrier String?
 }
 
 model Vendor {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   name      String
-  email     String   @unique
-  status    String   @default("pending")
-  apiKey    String?  @unique
+  email     String  @unique
+  status    String  @default("pending")
+  apiKey    String? @unique
 
   clerkUserId String? @unique
 
@@ -114,18 +116,20 @@ model Vendor {
 }
 
 model VendorOutfit {
-  id          String   @id @default(cuid())
-  vendorId    String
-  title       String
-  occasion    String
-  description String?
-  price       Int
-  image       String?
-  isActive    Boolean  @default(true)
-  published   Boolean  @default(false)
-  isFeatured  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  vendorId          String
+  title             String
+  occasion          String
+  description       String?
+  price             Int
+  image             String?
+  isActive          Boolean  @default(true)
+  published         Boolean  @default(false)
+  isFeatured        Boolean  @default(false)
+  stock             Int      @default(0)
+  lowStockThreshold Int      @default(5)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
