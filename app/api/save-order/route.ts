@@ -54,6 +54,12 @@ export async function POST(req: Request) {
     const bundleId = String(session.metadata?.bundleId || "");
     const vendorId = String(session.metadata?.vendorId || "");
 
+    /*
+    ==========================================
+    PREVENT DUPLICATE ORDERS
+    ==========================================
+    */
+
     const existingOrder = await prisma.order.findUnique({
       where: {
         stripeSessionId: session.id,
@@ -95,6 +101,12 @@ export async function POST(req: Request) {
       });
     }
 
+    /*
+    ==========================================
+    ORDER NUMBER
+    ==========================================
+    */
+
     const lastOrder = await prisma.order.findFirst({
       where: {
         orderNumber: {
@@ -111,6 +123,12 @@ export async function POST(req: Request) {
 
     const nextOrderNumber = (lastOrder?.orderNumber || 1000) + 1;
 
+    /*
+    ==========================================
+    FINANCIALS
+    ==========================================
+    */
+
     const amountTotal = session.amount_total || 0;
     const platformFeeCents = Math.round(amountTotal * 0.2);
     const vendorTotalCents = amountTotal - platformFeeCents;
@@ -121,7 +139,15 @@ export async function POST(req: Request) {
         ? session.payment_intent
         : session.payment_intent?.id || null;
 
-    const orderItems = lineItems.data.map((item) => {
+    /*
+    ==========================================
+    BUILD ORDER ITEMS
+    ==========================================
+    */
+
+    const orderItems = [];
+
+    for (const item of lineItems.data) {
       const rawProduct =
         typeof item.price?.product === "string"
           ? null
@@ -146,7 +172,47 @@ export async function POST(req: Request) {
       const unitPrice = item.price?.unit_amount || 0;
       const total = unitPrice * quantity;
 
-      return {
+      /*
+      ==========================================
+      INVENTORY REDUCTION
+      ==========================================
+      */
+
+      if (itemBundleId) {
+        const bundle = await prisma.bundle.findUnique({
+          where: {
+            id: itemBundleId,
+          },
+          select: {
+            id: true,
+            stock: true,
+            title: true,
+          },
+        });
+
+        if (!bundle) {
+          throw new Error("Bundle not found during inventory update.");
+        }
+
+        if (bundle.stock < quantity) {
+          throw new Error(
+            `Not enough stock remaining for ${bundle.title}.`
+          );
+        }
+
+        await prisma.bundle.update({
+          where: {
+            id: bundle.id,
+          },
+          data: {
+            stock: {
+              decrement: quantity,
+            },
+          },
+        });
+      }
+
+      orderItems.push({
         title: item.description || product?.name || "Outfit Bundle",
         quantity,
         unitPrice,
@@ -157,42 +223,67 @@ export async function POST(req: Request) {
         vendorPayoutCents: Math.round(total * 0.8),
         payoutStatus: "PENDING",
         fulfillmentStatus: "PENDING",
-      };
-    });
+      });
+    }
+
+    /*
+    ==========================================
+    CREATE ORDER
+    ==========================================
+    */
 
     const order = await prisma.order.create({
       data: {
         orderNumber: nextOrderNumber,
+
         stripeSessionId: session.id,
+
         stripePaymentId: paymentIntent,
+
         email:
           session.customer_details?.email ||
           session.customer_email ||
           null,
+
         clerkUserId: userId || null,
+
         amountTotal,
+
         currency: session.currency || "usd",
+
         status: session.payment_status || "unknown",
 
         gmvCents: amountTotal,
+
         platformFeeCents,
+
         vendorTotalCents,
+
         stripeFeeCents: 0,
+
         netRevenueCents,
 
         items: {
           create: orderItems,
         },
       },
+
       include: {
         items: true,
       },
     });
 
+    /*
+    ==========================================
+    CLEAR CART
+    ==========================================
+    */
+
     if (clearCart && checkoutType === "cart" && cartId) {
       await prisma.cartItem.deleteMany({
         where: {
           cartId,
+
           ...(userId
             ? {
                 cart: {
@@ -203,6 +294,12 @@ export async function POST(req: Request) {
         },
       });
     }
+
+    /*
+    ==========================================
+    SEND EMAIL
+    ==========================================
+    */
 
     if (order.email) {
       try {
