@@ -21,11 +21,24 @@ export async function POST(req: Request) {
 
   const bundle = await prisma.bundle.findUnique({
     where: { id: bundleId },
-    select: { id: true },
+    select: {
+      id: true,
+      stock: true,
+      published: true,
+      isActive: true,
+    },
   });
 
   if (!bundle) {
     redirect("/outfits?cartError=bundleNotFound");
+  }
+
+  if (!bundle.published || !bundle.isActive) {
+    redirect("/outfits?cartError=unavailable");
+  }
+
+  if (bundle.stock <= 0) {
+    redirect(`/outfits/${bundle.id}?cartError=soldOut`);
   }
 
   const cart = await prisma.cart.upsert({
@@ -34,24 +47,39 @@ export async function POST(req: Request) {
     create: { userId },
   });
 
-  await prisma.cartItem.upsert({
+  const existingItem = await prisma.cartItem.findUnique({
     where: {
       cartId_bundleId: {
         cartId: cart.id,
         bundleId: bundle.id,
       },
     },
-    update: {
-      quantity: {
-        increment: 1,
-      },
-    },
-    create: {
-      cartId: cart.id,
-      bundleId: bundle.id,
-      quantity: 1,
-    },
   });
+
+  const currentQuantity = existingItem?.quantity ?? 0;
+
+  if (currentQuantity >= bundle.stock) {
+    redirect(`/bag?cartError=notEnoughStock`);
+  }
+
+  if (existingItem) {
+    await prisma.cartItem.update({
+      where: {
+        id: existingItem.id,
+      },
+      data: {
+        quantity: currentQuantity + 1,
+      },
+    });
+  } else {
+    await prisma.cartItem.create({
+      data: {
+        cartId: cart.id,
+        bundleId: bundle.id,
+        quantity: 1,
+      },
+    });
+  }
 
   redirect("/bag?added=true");
 }
