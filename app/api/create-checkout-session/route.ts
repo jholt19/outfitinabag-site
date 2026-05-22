@@ -45,6 +45,12 @@ export async function GET(req: Request) {
     const userEmail =
       user?.emailAddresses?.[0]?.emailAddress || undefined;
 
+    /*
+    ==========================================
+    CART CHECKOUT
+    ==========================================
+    */
+
     if (cartCheckout) {
       if (!userId) {
         return Response.redirect(`${baseUrl}/account`, 303);
@@ -72,6 +78,53 @@ export async function GET(req: Request) {
           { ok: false, error: "Your cart is empty." },
           { status: 400 }
         );
+      }
+
+      /*
+      ==========================================
+      INVENTORY VALIDATION
+      ==========================================
+      */
+
+      for (const item of items) {
+        const bundle = item.bundle;
+
+        if (!bundle) {
+          return Response.redirect(
+            `${baseUrl}/bag?cartError=missingBundle`,
+            303
+          );
+        }
+
+        if (!bundle.published || !bundle.isActive) {
+          return Response.redirect(
+            `${baseUrl}/bag?cartError=unavailable`,
+            303
+          );
+        }
+
+        if (bundle.stock <= 0) {
+          return Response.redirect(
+            `${baseUrl}/bag?cartError=soldOut`,
+            303
+          );
+        }
+
+        if (item.quantity > bundle.stock) {
+          await prisma.cartItem.update({
+            where: {
+              id: item.id,
+            },
+            data: {
+              quantity: bundle.stock,
+            },
+          });
+
+          return Response.redirect(
+            `${baseUrl}/bag?cartError=stockAdjusted`,
+            303
+          );
+        }
       }
 
       const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] =
@@ -110,6 +163,7 @@ export async function GET(req: Request) {
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "payment",
+
         payment_method_types: ["card"],
 
         customer_email: userEmail,
@@ -117,6 +171,7 @@ export async function GET(req: Request) {
         line_items,
 
         success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+
         cancel_url: `${baseUrl}/bag`,
 
         metadata: {
@@ -131,9 +186,11 @@ export async function GET(req: Request) {
       if (singleVendor?.stripeAccountId) {
         sessionParams.payment_intent_data = {
           application_fee_amount: platformFeeCents,
+
           transfer_data: {
             destination: singleVendor.stripeAccountId,
           },
+
           metadata: {
             checkoutType: "cart",
             cartId: cart?.id ?? "",
@@ -153,6 +210,12 @@ export async function GET(req: Request) {
       return Response.redirect(session.url, 303);
     }
 
+    /*
+    ==========================================
+    SINGLE BUNDLE CHECKOUT
+    ==========================================
+    */
+
     if (!bundleId) {
       return Response.json(
         { ok: false, error: "Missing bundleId." },
@@ -169,6 +232,32 @@ export async function GET(req: Request) {
       return Response.json(
         { ok: false, error: "Bundle not found." },
         { status: 404 }
+      );
+    }
+
+    /*
+    ==========================================
+    INVENTORY VALIDATION
+    ==========================================
+    */
+
+    if (!bundle.published || !bundle.isActive) {
+      return Response.json(
+        {
+          ok: false,
+          error: "This outfit is currently unavailable.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (bundle.stock <= 0) {
+      return Response.json(
+        {
+          ok: false,
+          error: "This outfit is sold out.",
+        },
+        { status: 400 }
       );
     }
 
@@ -215,9 +304,11 @@ export async function GET(req: Request) {
 
       payment_intent_data: {
         application_fee_amount: platformFeeCents,
+
         transfer_data: {
           destination: bundle.vendor.stripeAccountId,
         },
+
         metadata: {
           checkoutType: "single",
           bundleId: bundle.id,
