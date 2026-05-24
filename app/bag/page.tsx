@@ -10,7 +10,16 @@ function fmtCents(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export default async function BagPage() {
+export default async function BagPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    promo?: string;
+  }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const promoCode = String(params?.promo || "").trim().toUpperCase();
+
   const { userId } = await auth();
 
   if (!userId) {
@@ -55,6 +64,38 @@ export default async function BagPage() {
   const totalItems = items.reduce((sum, item) => {
     return sum + item.quantity;
   }, 0);
+
+  /*
+  ==========================================
+  PROMO CODE
+  ==========================================
+  */
+
+  let promo = null;
+  let discountAmount = 0;
+
+  if (promoCode) {
+    promo = await prisma.promoCode.findFirst({
+      where: {
+        code: promoCode,
+        isActive: true,
+      },
+    });
+
+    if (promo) {
+      if (promo.percentOff) {
+        discountAmount = Math.round(
+          subtotal * (promo.percentOff / 100)
+        );
+      } else if (promo.amountOffCents) {
+        discountAmount = promo.amountOffCents;
+      }
+
+      discountAmount = Math.min(discountAmount, subtotal);
+    }
+  }
+
+  const finalTotal = Math.max(0, subtotal - discountAmount);
 
   if (items.length === 0) {
     return (
@@ -161,7 +202,15 @@ export default async function BagPage() {
                       defaultValue={item.quantity}
                       className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black"
                     >
-                      {[1, 2, 3, 4, 5].map((n) => (
+                      {Array.from(
+                        {
+                          length: Math.max(
+                            1,
+                            Math.min(item.bundle.stock, 10)
+                          ),
+                        },
+                        (_, i) => i + 1
+                      ).map((n) => (
                         <option key={n} value={n}>
                           {n}
                         </option>
@@ -197,25 +246,81 @@ export default async function BagPage() {
             Order Summary
           </div>
 
-          <div className="mt-5 space-y-4">
+          <div className="mt-5">
+            <form method="GET" action="/bag" className="grid gap-3">
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                Promo Code
+              </label>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="promo"
+                  defaultValue={promoCode}
+                  placeholder="WELCOME10"
+                  className="flex-1 rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm font-semibold uppercase text-black"
+                />
+
+                <button
+                  type="submit"
+                  className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Apply
+                </button>
+              </div>
+            </form>
+
+            {promoCode && !promo && (
+              <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                Invalid promo code.
+              </div>
+            )}
+
+            {promo && (
+              <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                Promo applied: {promo.code}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between border-b border-black/10 pb-4 text-sm">
               <span className="text-neutral-600">Subtotal</span>
               <strong className="text-black">{fmtCents(subtotal)}</strong>
             </div>
 
+            {discountAmount > 0 && (
+              <div className="flex items-center justify-between border-b border-black/10 pb-4 text-sm">
+                <span className="text-emerald-600">
+                  Discount ({promo?.code})
+                </span>
+
+                <strong className="text-emerald-700">
+                  -{fmtCents(discountAmount)}
+                </strong>
+              </div>
+            )}
+
             <div className="flex items-center justify-between border-b border-black/10 pb-4 text-sm">
               <span className="text-neutral-600">Shipping</span>
-              <strong className="text-black">Calculated at checkout</strong>
+              <strong className="text-black">
+                Calculated at checkout
+              </strong>
             </div>
 
             <div className="flex items-center justify-between text-lg">
               <span className="font-semibold text-black">Total</span>
-              <strong className="text-black">{fmtCents(subtotal)}</strong>
+
+              <strong className="text-black">
+                {fmtCents(finalTotal)}
+              </strong>
             </div>
           </div>
 
           <Link
-            href="/api/create-checkout-session?cart=true"
+            href={`/api/create-checkout-session?cart=true${
+              promo ? `&promo=${promo.code}` : ""
+            }`}
             className="mt-6 inline-flex w-full justify-center rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
           >
             Checkout Securely
