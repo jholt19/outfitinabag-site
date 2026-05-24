@@ -33,8 +33,15 @@ export async function GET(req: Request) {
     });
 
     const url = new URL(req.url);
+
     const bundleId = url.searchParams.get("bundleId");
     const cartCheckout = url.searchParams.get("cart") === "true";
+
+    const promoCodeInput = String(
+      url.searchParams.get("promo") || ""
+    )
+      .trim()
+      .toUpperCase();
 
     const baseUrl = getBaseUrl();
 
@@ -44,6 +51,60 @@ export async function GET(req: Request) {
 
     const userEmail =
       user?.emailAddresses?.[0]?.emailAddress || undefined;
+
+    /*
+    ==========================================
+    PROMO CODE VALIDATION
+    ==========================================
+    */
+
+    let promo = null;
+
+    if (promoCodeInput) {
+      promo = await prisma.promoCode.findFirst({
+        where: {
+          code: promoCodeInput,
+          isActive: true,
+        },
+      });
+
+      if (!promo) {
+        return Response.redirect(
+          `${baseUrl}/bag?promoError=invalid`,
+          303
+        );
+      }
+
+      if (
+        promo.maxUses &&
+        promo.usedCount >= promo.maxUses
+      ) {
+        return Response.redirect(
+          `${baseUrl}/bag?promoError=maxUses`,
+          303
+        );
+      }
+
+      if (
+        promo.startsAt &&
+        new Date() < promo.startsAt
+      ) {
+        return Response.redirect(
+          `${baseUrl}/bag?promoError=notStarted`,
+          303
+        );
+      }
+
+      if (
+        promo.expiresAt &&
+        new Date() > promo.expiresAt
+      ) {
+        return Response.redirect(
+          `${baseUrl}/bag?promoError=expired`,
+          303
+        );
+      }
+    }
 
     /*
     ==========================================
@@ -152,6 +213,31 @@ export async function GET(req: Request) {
         return sum + item.bundle.price * item.quantity;
       }, 0);
 
+      /*
+      ==========================================
+      DISCOUNT CALCULATION
+      ==========================================
+      */
+
+      let discountAmount = 0;
+
+      if (promo) {
+        if (promo.percentOff) {
+          discountAmount = Math.round(
+            subtotal * (promo.percentOff / 100)
+          );
+        } else if (promo.amountOffCents) {
+          discountAmount = promo.amountOffCents;
+        }
+
+        discountAmount = Math.min(discountAmount, subtotal);
+      }
+
+      const discountedSubtotal = Math.max(
+        0,
+        subtotal - discountAmount
+      );
+
       const vendorIds = Array.from(
         new Set(items.map((item) => item.bundle.vendorId))
       );
@@ -159,7 +245,9 @@ export async function GET(req: Request) {
       const singleVendor =
         vendorIds.length === 1 ? items[0]?.bundle.vendor : null;
 
-      const platformFeeCents = Math.round(subtotal * 0.2);
+      const platformFeeCents = Math.round(
+        discountedSubtotal * 0.2
+      );
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "payment",
@@ -179,9 +267,29 @@ export async function GET(req: Request) {
           cartId: cart?.id ?? "",
           userId,
           vendorIds: vendorIds.join(","),
+          promoCode: promo?.code || "",
+          discountAmount: String(discountAmount),
           platformFeeCents: String(platformFeeCents),
         },
       };
+
+      /*
+      ==========================================
+      APPLY DISCOUNT
+      ==========================================
+      */
+
+      if (discountAmount > 0) {
+        sessionParams.discounts = [
+          {
+            coupon: await createStripeCoupon(
+              stripe,
+              promo?.code || "PROMO",
+              discountAmount
+            ),
+          },
+        ];
+      }
 
       if (singleVendor?.stripeAccountId) {
         sessionParams.payment_intent_data = {
@@ -196,6 +304,8 @@ export async function GET(req: Request) {
             cartId: cart?.id ?? "",
             userId,
             vendorId: singleVendor.id,
+            promoCode: promo?.code || "",
+            discountAmount: String(discountAmount),
             platformFeeCents: String(platformFeeCents),
           },
         };
@@ -205,6 +315,25 @@ export async function GET(req: Request) {
 
       if (!session.url) {
         throw new Error("Stripe did not return a checkout URL.");
+      }
+
+      /*
+      ==========================================
+      TRACK PROMO USAGE
+      ==========================================
+      */
+
+      if (promo) {
+        await prisma.promoCode.update({
+          where: {
+            id: promo.id,
+          },
+          data: {
+            usedCount: {
+              increment: 1,
+            },
+          },
+        });
       }
 
       return Response.redirect(session.url, 303);
@@ -235,12 +364,6 @@ export async function GET(req: Request) {
       );
     }
 
-    /*
-    ==========================================
-    INVENTORY VALIDATION
-    ==========================================
-    */
-
     if (!bundle.published || !bundle.isActive) {
       return Response.json(
         {
@@ -266,7 +389,7 @@ export async function GET(req: Request) {
         {
           ok: false,
           error:
-            "This vendor has not connected Stripe yet. Connect payouts before checkout.",
+            "This vendor has not connected Stripe yet.",
         },
         { status: 400 }
       );
@@ -322,7 +445,6 @@ export async function GET(req: Request) {
         bundleId: bundle.id,
         vendorId: bundle.vendorId,
         platformFeeCents: String(platformFeeCents),
-        stripeConnectDestination: bundle.vendor.stripeAccountId,
       },
 
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -330,11 +452,12 @@ export async function GET(req: Request) {
       cancel_url: `${baseUrl}/bag`,
     });
 
-    if (!session.url) {
+      if (!session.url) {
       throw new Error("Stripe did not return a checkout URL.");
     }
 
     return Response.redirect(session.url, 303);
+
   } catch (error: any) {
     console.error("create-checkout-session GET error:", error);
 
@@ -346,6 +469,21 @@ export async function GET(req: Request) {
       { status: 500 }
     );
   }
+}
+
+async function createStripeCoupon(
+  stripe: Stripe,
+  code: string,
+  amountOff: number
+) {
+  const coupon = await stripe.coupons.create({
+    amount_off: amountOff,
+    currency: "usd",
+    duration: "once",
+    name: code,
+  });
+
+  return coupon.id;
 }
 
 export async function POST() {
