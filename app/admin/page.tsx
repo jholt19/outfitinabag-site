@@ -8,7 +8,7 @@ export default async function AdminPage() {
   await requireAdmin();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+    <main className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 lg:px-8">
       <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
         <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
           Admin
@@ -18,11 +18,12 @@ export default async function AdminPage() {
           Manage OutfitInABag.
         </h1>
 
-        <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600 sm:text-lg">
-          Access your admin tools for bundles, vendors, orders, and payouts.
+        <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600 sm:text-lg">
+          Access your admin tools for bundles, orders, vendors, promotions,
+          analytics, and marketplace operations.
         </p>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Link
             href="/admin/dashboard"
             className="rounded-[24px] bg-black p-5 text-white transition hover:opacity-90"
@@ -53,7 +54,7 @@ export default async function AdminPage() {
             </div>
 
             <p className="mt-2 text-sm text-neutral-600">
-              Review, publish, and feature outfit bundles.
+              Review, publish, and feature bundles.
             </p>
           </Link>
 
@@ -89,6 +90,27 @@ export default async function AdminPage() {
             <p className="mt-2 text-sm text-neutral-600">
               Manage vendors and Stripe onboarding.
             </p>
+          </Link>
+
+          <Link
+            href="/admin/promo"
+            className="rounded-[24px] border border-yellow-300 bg-gradient-to-br from-yellow-50 to-white p-5 transition hover:border-yellow-500"
+          >
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-black">
+              Promo Codes
+            </div>
+
+            <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-black">
+              Discounts
+            </div>
+
+            <p className="mt-2 text-sm text-neutral-600">
+              Create sales, coupons, and promotional offers.
+            </p>
+
+            <div className="mt-4 inline-flex rounded-full bg-black px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
+              Marketing
+            </div>
           </Link>
         </div>
       </section>
