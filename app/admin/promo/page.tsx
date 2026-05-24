@@ -11,12 +11,40 @@ function fmtPromo(promo: {
   amountOffCents: number | null;
 }) {
   if (promo.percentOff) return `${promo.percentOff}% off`;
-  if (promo.amountOffCents) return `$${(promo.amountOffCents / 100).toFixed(2)} off`;
+  if (promo.amountOffCents) {
+    return `$${(promo.amountOffCents / 100).toFixed(2)} off`;
+  }
   return "No discount set";
 }
 
-export default async function AdminPromoPage() {
+function getMessage(error?: string, created?: string, updated?: string) {
+  if (created) return { type: "success", text: "Promo code saved successfully." };
+  if (updated) return { type: "success", text: "Promo code updated successfully." };
+
+  if (error === "missingCode") return { type: "error", text: "Enter a promo code." };
+  if (error === "invalidCode") return { type: "error", text: "Code must be 3–30 characters using letters, numbers, underscores, or dashes." };
+  if (error === "chooseOneDiscount") return { type: "error", text: "Use either Percent Off OR Dollar Off, not both." };
+  if (error === "missingDiscount") return { type: "error", text: "Enter a discount amount. Example: Percent Off = 10." };
+  if (error === "percentTooHigh") return { type: "error", text: "Percent off cannot be higher than 100." };
+  if (error === "missingPromoId") return { type: "error", text: "Missing promo ID." };
+  if (error === "promoNotFound") return { type: "error", text: "Promo code was not found." };
+
+  return null;
+}
+
+export default async function AdminPromoPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    error?: string;
+    created?: string;
+    updated?: string;
+  }>;
+}) {
   await requireAdmin();
+
+  const params = searchParams ? await searchParams : {};
+  const message = getMessage(params.error, params.created, params.updated);
 
   const promos = await prisma.promoCode.findMany({
     orderBy: { createdAt: "desc" },
@@ -41,29 +69,47 @@ export default async function AdminPromoPage() {
           </div>
 
           <Link
-            href="/admin/dashboard"
+            href="/admin"
             className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
           >
-            ← Dashboard
+            ← Admin Home
           </Link>
         </div>
       </section>
 
+      {message && (
+        <section
+          className={`mt-6 rounded-2xl border px-5 py-4 text-sm font-semibold ${
+            message.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {message.text}
+        </section>
+      )}
+
       <section className="mt-8 grid gap-6 lg:grid-cols-[420px_1fr]">
         <div className="rounded-[28px] border border-black/10 bg-white p-6">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-            Create Code
+            Create or Update Code
           </div>
 
           <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             New discount
           </h2>
 
+          <p className="mt-2 text-sm leading-6 text-neutral-600">
+            Use Percent Off for codes like WELCOME10. Leave Dollar Off blank
+            when using a percentage.
+          </p>
+
           <form action={createPromoCode} className="mt-6 grid gap-4">
             <div>
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                 Code
               </label>
+
               <input
                 name="code"
                 required
@@ -76,6 +122,7 @@ export default async function AdminPromoPage() {
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                 Description
               </label>
+
               <input
                 name="description"
                 placeholder="10% off first order"
@@ -88,10 +135,11 @@ export default async function AdminPromoPage() {
                 <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                   Percent Off
                 </label>
+
                 <input
                   name="percentOff"
                   type="number"
-                  min="0"
+                  min="1"
                   max="100"
                   placeholder="10"
                   className="mt-1 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
@@ -102,12 +150,13 @@ export default async function AdminPromoPage() {
                 <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                   Dollar Off
                 </label>
+
                 <input
                   name="amountOffDollars"
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
-                  placeholder="5.00"
+                  placeholder="Leave blank"
                   className="mt-1 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
                 />
               </div>
@@ -117,11 +166,12 @@ export default async function AdminPromoPage() {
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                 Max Uses
               </label>
+
               <input
                 name="maxUses"
                 type="number"
-                min="0"
-                placeholder="100"
+                min="1"
+                placeholder="Leave blank for unlimited"
                 className="mt-1 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
               />
             </div>
@@ -130,7 +180,7 @@ export default async function AdminPromoPage() {
               type="submit"
               className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              Create Promo Code
+              Save Promo Code
             </button>
           </form>
         </div>
