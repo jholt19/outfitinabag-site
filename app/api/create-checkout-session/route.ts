@@ -17,6 +17,28 @@ function getBaseUrl() {
   return "http://localhost:3000";
 }
 
+async function createStripeCoupon(
+  stripe: Stripe,
+  promo: {
+    code: string;
+    percentOff: number | null;
+    amountOffCents: number | null;
+  }
+) {
+  const coupon = await stripe.coupons.create({
+    duration: "once",
+    name: promo.code,
+    ...(promo.percentOff
+      ? { percent_off: promo.percentOff }
+      : {
+          amount_off: promo.amountOffCents || 0,
+          currency: "usd",
+        }),
+  });
+
+  return coupon.id;
+}
+
 export async function GET(req: Request) {
   try {
     const key = process.env.STRIPE_SECRET_KEY;
@@ -37,26 +59,17 @@ export async function GET(req: Request) {
     const bundleId = url.searchParams.get("bundleId");
     const cartCheckout = url.searchParams.get("cart") === "true";
 
-    const promoCodeInput = String(
-      url.searchParams.get("promo") || ""
-    )
+    const promoCodeInput = String(url.searchParams.get("promo") || "")
       .trim()
       .toUpperCase();
 
     const baseUrl = getBaseUrl();
 
     const { userId } = await auth();
-
     const user = await currentUser();
 
     const userEmail =
       user?.emailAddresses?.[0]?.emailAddress || undefined;
-
-    /*
-    ==========================================
-    PROMO CODE VALIDATION
-    ==========================================
-    */
 
     let promo = null;
 
@@ -69,48 +82,21 @@ export async function GET(req: Request) {
       });
 
       if (!promo) {
-        return Response.redirect(
-          `${baseUrl}/bag?promoError=invalid`,
-          303
-        );
+        return Response.redirect(`${baseUrl}/bag?promoError=invalid`, 303);
       }
 
-      if (
-        promo.maxUses &&
-        promo.usedCount >= promo.maxUses
-      ) {
-        return Response.redirect(
-          `${baseUrl}/bag?promoError=maxUses`,
-          303
-        );
+      if (promo.maxUses && promo.usedCount >= promo.maxUses) {
+        return Response.redirect(`${baseUrl}/bag?promoError=maxUses`, 303);
       }
 
-      if (
-        promo.startsAt &&
-        new Date() < promo.startsAt
-      ) {
-        return Response.redirect(
-          `${baseUrl}/bag?promoError=notStarted`,
-          303
-        );
+      if (promo.startsAt && new Date() < promo.startsAt) {
+        return Response.redirect(`${baseUrl}/bag?promoError=notStarted`, 303);
       }
 
-      if (
-        promo.expiresAt &&
-        new Date() > promo.expiresAt
-      ) {
-        return Response.redirect(
-          `${baseUrl}/bag?promoError=expired`,
-          303
-        );
+      if (promo.expiresAt && new Date() > promo.expiresAt) {
+        return Response.redirect(`${baseUrl}/bag?promoError=expired`, 303);
       }
     }
-
-    /*
-    ==========================================
-    CART CHECKOUT
-    ==========================================
-    */
 
     if (cartCheckout) {
       if (!userId) {
@@ -141,12 +127,6 @@ export async function GET(req: Request) {
         );
       }
 
-      /*
-      ==========================================
-      INVENTORY VALIDATION
-      ==========================================
-      */
-
       for (const item of items) {
         const bundle = item.bundle;
 
@@ -165,20 +145,13 @@ export async function GET(req: Request) {
         }
 
         if (bundle.stock <= 0) {
-          return Response.redirect(
-            `${baseUrl}/bag?cartError=soldOut`,
-            303
-          );
+          return Response.redirect(`${baseUrl}/bag?cartError=soldOut`, 303);
         }
 
         if (item.quantity > bundle.stock) {
           await prisma.cartItem.update({
-            where: {
-              id: item.id,
-            },
-            data: {
-              quantity: bundle.stock,
-            },
+            where: { id: item.id },
+            data: { quantity: bundle.stock },
           });
 
           return Response.redirect(
@@ -213,31 +186,6 @@ export async function GET(req: Request) {
         return sum + item.bundle.price * item.quantity;
       }, 0);
 
-      /*
-      ==========================================
-      DISCOUNT CALCULATION
-      ==========================================
-      */
-
-      let discountAmount = 0;
-
-      if (promo) {
-        if (promo.percentOff) {
-          discountAmount = Math.round(
-            subtotal * (promo.percentOff / 100)
-          );
-        } else if (promo.amountOffCents) {
-          discountAmount = promo.amountOffCents;
-        }
-
-        discountAmount = Math.min(discountAmount, subtotal);
-      }
-
-      const discountedSubtotal = Math.max(
-        0,
-        subtotal - discountAmount
-      );
-
       const vendorIds = Array.from(
         new Set(items.map((item) => item.bundle.vendorId))
       );
@@ -245,21 +193,36 @@ export async function GET(req: Request) {
       const singleVendor =
         vendorIds.length === 1 ? items[0]?.bundle.vendor : null;
 
-      const platformFeeCents = Math.round(
-        discountedSubtotal * 0.2
+      let estimatedDiscountAmount = 0;
+
+      if (promo) {
+        if (promo.percentOff) {
+          estimatedDiscountAmount = Math.round(
+            subtotal * (promo.percentOff / 100)
+          );
+        } else if (promo.amountOffCents) {
+          estimatedDiscountAmount = promo.amountOffCents;
+        }
+
+        estimatedDiscountAmount = Math.min(
+          estimatedDiscountAmount,
+          subtotal
+        );
+      }
+
+      const discountedSubtotal = Math.max(
+        0,
+        subtotal - estimatedDiscountAmount
       );
+
+      const platformFeeCents = Math.round(discountedSubtotal * 0.2);
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "payment",
-
         payment_method_types: ["card"],
-
         customer_email: userEmail,
-
         line_items,
-
         success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-
         cancel_url: `${baseUrl}/bag`,
 
         metadata: {
@@ -268,25 +231,19 @@ export async function GET(req: Request) {
           userId,
           vendorIds: vendorIds.join(","),
           promoCode: promo?.code || "",
-          discountAmount: String(discountAmount),
+          discountAmount: String(estimatedDiscountAmount),
           platformFeeCents: String(platformFeeCents),
         },
       };
 
-      /*
-      ==========================================
-      APPLY DISCOUNT
-      ==========================================
-      */
-
-      if (discountAmount > 0) {
+      if (promo) {
         sessionParams.discounts = [
           {
-            coupon: await createStripeCoupon(
-              stripe,
-              promo?.code || "PROMO",
-              discountAmount
-            ),
+            coupon: await createStripeCoupon(stripe, {
+              code: promo.code,
+              percentOff: promo.percentOff,
+              amountOffCents: promo.amountOffCents,
+            }),
           },
         ];
       }
@@ -294,18 +251,16 @@ export async function GET(req: Request) {
       if (singleVendor?.stripeAccountId) {
         sessionParams.payment_intent_data = {
           application_fee_amount: platformFeeCents,
-
           transfer_data: {
             destination: singleVendor.stripeAccountId,
           },
-
           metadata: {
             checkoutType: "cart",
             cartId: cart?.id ?? "",
             userId,
             vendorId: singleVendor.id,
             promoCode: promo?.code || "",
-            discountAmount: String(discountAmount),
+            discountAmount: String(estimatedDiscountAmount),
             platformFeeCents: String(platformFeeCents),
           },
         };
@@ -317,17 +272,9 @@ export async function GET(req: Request) {
         throw new Error("Stripe did not return a checkout URL.");
       }
 
-      /*
-      ==========================================
-      TRACK PROMO USAGE
-      ==========================================
-      */
-
       if (promo) {
         await prisma.promoCode.update({
-          where: {
-            id: promo.id,
-          },
+          where: { id: promo.id },
           data: {
             usedCount: {
               increment: 1,
@@ -338,12 +285,6 @@ export async function GET(req: Request) {
 
       return Response.redirect(session.url, 303);
     }
-
-    /*
-    ==========================================
-    SINGLE BUNDLE CHECKOUT
-    ==========================================
-    */
 
     if (!bundleId) {
       return Response.json(
@@ -366,31 +307,21 @@ export async function GET(req: Request) {
 
     if (!bundle.published || !bundle.isActive) {
       return Response.json(
-        {
-          ok: false,
-          error: "This outfit is currently unavailable.",
-        },
+        { ok: false, error: "This outfit is currently unavailable." },
         { status: 400 }
       );
     }
 
     if (bundle.stock <= 0) {
       return Response.json(
-        {
-          ok: false,
-          error: "This outfit is sold out.",
-        },
+        { ok: false, error: "This outfit is sold out." },
         { status: 400 }
       );
     }
 
     if (!bundle.vendor?.stripeAccountId) {
       return Response.json(
-        {
-          ok: false,
-          error:
-            "This vendor has not connected Stripe yet.",
-        },
+        { ok: false, error: "This vendor has not connected Stripe yet." },
         { status: 400 }
       );
     }
@@ -399,11 +330,8 @@ export async function GET(req: Request) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-
       payment_method_types: ["card"],
-
       customer_email: userEmail,
-
       line_items: [
         {
           quantity: 1,
@@ -427,11 +355,9 @@ export async function GET(req: Request) {
 
       payment_intent_data: {
         application_fee_amount: platformFeeCents,
-
         transfer_data: {
           destination: bundle.vendor.stripeAccountId,
         },
-
         metadata: {
           checkoutType: "single",
           bundleId: bundle.id,
@@ -448,16 +374,14 @@ export async function GET(req: Request) {
       },
 
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-
       cancel_url: `${baseUrl}/bag`,
     });
 
-      if (!session.url) {
+    if (!session.url) {
       throw new Error("Stripe did not return a checkout URL.");
     }
 
     return Response.redirect(session.url, 303);
-
   } catch (error: any) {
     console.error("create-checkout-session GET error:", error);
 
@@ -469,21 +393,6 @@ export async function GET(req: Request) {
       { status: 500 }
     );
   }
-}
-
-async function createStripeCoupon(
-  stripe: Stripe,
-  code: string,
-  amountOff: number
-) {
-  const coupon = await stripe.coupons.create({
-    amount_off: amountOff,
-    currency: "usd",
-    duration: "once",
-    name: code,
-  });
-
-  return coupon.id;
 }
 
 export async function POST() {
