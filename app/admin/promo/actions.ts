@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 export async function createPromoCode(formData: FormData) {
@@ -9,14 +10,43 @@ export async function createPromoCode(formData: FormData) {
 
   const code = String(formData.get("code") || "").trim().toUpperCase();
   const description = String(formData.get("description") || "").trim();
-  const percentOff = Number(formData.get("percentOff") || 0);
-  const amountOffCents = Math.round(
-    Number(formData.get("amountOffDollars") || 0) * 100
-  );
-  const maxUses = Number(formData.get("maxUses") || 0);
+
+  const percentOffRaw = String(formData.get("percentOff") || "").trim();
+  const amountOffRaw = String(formData.get("amountOffDollars") || "").trim();
+  const maxUsesRaw = String(formData.get("maxUses") || "").trim();
+
+  const percentOff = percentOffRaw ? Number(percentOffRaw) : 0;
+  const amountOffCents = amountOffRaw
+    ? Math.round(Number(amountOffRaw) * 100)
+    : 0;
+  const maxUses = maxUsesRaw ? Number(maxUsesRaw) : 0;
 
   if (!code) {
-    throw new Error("Promo code is required.");
+    redirect("/admin/promo?error=missingCode");
+  }
+
+  if (!/^[A-Z0-9_-]{3,30}$/.test(code)) {
+    redirect("/admin/promo?error=invalidCode");
+  }
+
+  if (percentOff > 0 && amountOffCents > 0) {
+    redirect("/admin/promo?error=chooseOneDiscount");
+  }
+
+  if (percentOff <= 0 && amountOffCents <= 0) {
+    redirect("/admin/promo?error=missingDiscount");
+  }
+
+  if (percentOff > 100) {
+    redirect("/admin/promo?error=percentTooHigh");
+  }
+
+  const existing = await prisma.promoCode.findUnique({
+    where: { code },
+  });
+
+  if (existing) {
+    redirect("/admin/promo?error=duplicateCode");
   }
 
   await prisma.promoCode.create({
@@ -26,10 +56,12 @@ export async function createPromoCode(formData: FormData) {
       percentOff: percentOff > 0 ? percentOff : null,
       amountOffCents: amountOffCents > 0 ? amountOffCents : null,
       maxUses: maxUses > 0 ? maxUses : null,
+      isActive: true,
     },
   });
 
   revalidatePath("/admin/promo");
+  redirect("/admin/promo?created=true");
 }
 
 export async function togglePromoCode(formData: FormData) {
@@ -37,11 +69,17 @@ export async function togglePromoCode(formData: FormData) {
 
   const promoId = String(formData.get("promoId") || "");
 
+  if (!promoId) {
+    redirect("/admin/promo?error=missingPromoId");
+  }
+
   const promo = await prisma.promoCode.findUnique({
     where: { id: promoId },
   });
 
-  if (!promo) return;
+  if (!promo) {
+    redirect("/admin/promo?error=promoNotFound");
+  }
 
   await prisma.promoCode.update({
     where: { id: promoId },
@@ -49,4 +87,5 @@ export async function togglePromoCode(formData: FormData) {
   });
 
   revalidatePath("/admin/promo");
+  redirect("/admin/promo?updated=true");
 }
