@@ -21,9 +21,7 @@ export async function createPromoCode(formData: FormData) {
     : 0;
   const maxUses = maxUsesRaw ? Number(maxUsesRaw) : 0;
 
-  if (!code) {
-    redirect("/admin/promo?error=missingCode");
-  }
+  if (!code) redirect("/admin/promo?error=missingCode");
 
   if (!/^[A-Z0-9_-]{3,30}$/.test(code)) {
     redirect("/admin/promo?error=invalidCode");
@@ -41,16 +39,16 @@ export async function createPromoCode(formData: FormData) {
     redirect("/admin/promo?error=percentTooHigh");
   }
 
-  const existing = await prisma.promoCode.findUnique({
+  await prisma.promoCode.upsert({
     where: { code },
-  });
-
-  if (existing) {
-    redirect("/admin/promo?error=duplicateCode");
-  }
-
-  await prisma.promoCode.create({
-    data: {
+    update: {
+      description: description || null,
+      percentOff: percentOff > 0 ? percentOff : null,
+      amountOffCents: amountOffCents > 0 ? amountOffCents : null,
+      maxUses: maxUses > 0 ? maxUses : null,
+      isActive: true,
+    },
+    create: {
       code,
       description: description || null,
       percentOff: percentOff > 0 ? percentOff : null,
@@ -69,17 +67,13 @@ export async function togglePromoCode(formData: FormData) {
 
   const promoId = String(formData.get("promoId") || "");
 
-  if (!promoId) {
-    redirect("/admin/promo?error=missingPromoId");
-  }
+  if (!promoId) redirect("/admin/promo?error=missingPromoId");
 
   const promo = await prisma.promoCode.findUnique({
     where: { id: promoId },
   });
 
-  if (!promo) {
-    redirect("/admin/promo?error=promoNotFound");
-  }
+  if (!promo) redirect("/admin/promo?error=promoNotFound");
 
   await prisma.promoCode.update({
     where: { id: promoId },
