@@ -10,6 +10,34 @@ function fmtCents(cents: number | null | undefined) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+function fmtDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function statusColor(status?: string | null) {
+  switch ((status || "").toUpperCase()) {
+    case "PAID":
+    case "COMPLETE":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+
+    case "PROCESSING":
+      return "border-yellow-200 bg-yellow-50 text-yellow-700";
+
+    case "SHIPPED":
+      return "border-blue-200 bg-blue-50 text-blue-700";
+
+    case "CANCELLED":
+      return "border-red-200 bg-red-50 text-red-700";
+
+    default:
+      return "border-black/10 bg-[#f7f5f2] text-neutral-700";
+  }
+}
+
 export default async function AccountPage() {
   const { userId } = await auth();
 
@@ -35,9 +63,22 @@ export default async function AccountPage() {
 
   const orders = email
     ? await prisma.order.findMany({
-        where: { email },
-        orderBy: { createdAt: "desc" },
-        take: 10,
+        where: {
+          OR: [
+            { email },
+            { clerkUserId: userId },
+          ],
+        },
+
+        include: {
+          items: true,
+        },
+
+        orderBy: {
+          createdAt: "desc",
+        },
+
+        take: 20,
       })
     : [];
 
@@ -45,6 +86,7 @@ export default async function AccountPage() {
     where: {
       userId,
     },
+
     include: {
       bundle: {
         include: {
@@ -52,10 +94,16 @@ export default async function AccountPage() {
         },
       },
     },
+
     orderBy: {
       createdAt: "desc",
     },
   });
+
+  const totalSpent = orders.reduce(
+    (sum, order) => sum + (order.amountTotal || 0),
+    0
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
@@ -80,6 +128,13 @@ export default async function AccountPage() {
           >
             Shop Outfits
           </Link>
+
+          <Link
+            href="/bag"
+            className="rounded-full border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-black"
+          >
+            View Bag
+          </Link>
         </div>
       </section>
 
@@ -101,9 +156,7 @@ export default async function AccountPage() {
           </div>
 
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            {fmtCents(
-              orders.reduce((sum, order) => sum + (order.amountTotal || 0), 0)
-            )}
+            {fmtCents(totalSpent)}
           </div>
         </div>
 
@@ -116,6 +169,109 @@ export default async function AccountPage() {
             {savedOutfits.length}
           </div>
         </div>
+      </section>
+
+      {/* ORDER HISTORY */}
+      <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+              Purchase History
+            </div>
+
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+              Recent Orders
+            </h2>
+          </div>
+        </div>
+
+        {orders.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
+            You have not placed any orders yet.
+          </div>
+        ) : (
+          <div className="mt-6 space-y-5">
+            {orders.map((order) => (
+              <article
+                key={order.id}
+                className="rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                      Order Number
+                    </div>
+
+                    <div className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-black">
+                      OIAB-{order.orderNumber ?? "—"}
+                    </div>
+
+                    <div className="mt-2 text-sm text-neutral-600">
+                      {fmtDate(order.createdAt)}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div
+                      className={`inline-flex rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${statusColor(
+                        order.status
+                      )}`}
+                    >
+                      {order.status || "Processing"}
+                    </div>
+
+                    <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-black">
+                      {fmtCents(order.amountTotal)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4">
+                  {order.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 rounded-2xl border border-black/10 bg-white p-4"
+                    >
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="h-20 w-20 rounded-2xl object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#f7f5f2] text-xs text-neutral-400">
+                          No image
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-lg font-semibold text-black">
+                          {item.title}
+                        </div>
+
+                        <div className="mt-1 text-sm text-neutral-600">
+                          Quantity: {item.quantity}
+                        </div>
+
+                        <div className="mt-1 text-sm text-neutral-600">
+                          {fmtCents(item.unitPrice)}
+                        </div>
+                      </div>
+
+                      <div
+                        className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${statusColor(
+                          item.fulfillmentStatus
+                        )}`}
+                      >
+                        {item.fulfillmentStatus || "Pending"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* SAVED OUTFITS */}
