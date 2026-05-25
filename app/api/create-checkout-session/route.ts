@@ -236,8 +236,11 @@ export async function GET(req: Request) {
         },
       };
 
-      if (promo) {
-        sessionParams.discounts = [
+      if (
+  promo &&
+  ((promo.percentOff && promo.percentOff > 0) ||
+    (promo.amountOffCents && promo.amountOffCents > 0))
+) {
           {
             coupon: await createStripeCoupon(stripe, {
               code: promo.code,
