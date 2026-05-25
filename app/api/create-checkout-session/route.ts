@@ -28,10 +28,10 @@ async function createStripeCoupon(
   const coupon = await stripe.coupons.create({
     duration: "once",
     name: promo.code,
-    ...(promo.percentOff
+    ...(promo.percentOff && promo.percentOff > 0
       ? { percent_off: promo.percentOff }
       : {
-          amount_off: promo.amountOffCents || 0,
+          amount_off: promo.amountOffCents || 1,
           currency: "usd",
         }),
   });
@@ -83,6 +83,13 @@ export async function GET(req: Request) {
 
       if (!promo) {
         return Response.redirect(`${baseUrl}/bag?promoError=invalid`, 303);
+      }
+
+      if (!promo.percentOff && !promo.amountOffCents) {
+        return Response.redirect(
+          `${baseUrl}/bag?promoError=missingDiscount`,
+          303
+        );
       }
 
       if (promo.maxUses && promo.usedCount >= promo.maxUses) {
@@ -196,11 +203,11 @@ export async function GET(req: Request) {
       let estimatedDiscountAmount = 0;
 
       if (promo) {
-        if (promo.percentOff) {
+        if (promo.percentOff && promo.percentOff > 0) {
           estimatedDiscountAmount = Math.round(
             subtotal * (promo.percentOff / 100)
           );
-        } else if (promo.amountOffCents) {
+        } else if (promo.amountOffCents && promo.amountOffCents > 0) {
           estimatedDiscountAmount = promo.amountOffCents;
         }
 
@@ -224,7 +231,6 @@ export async function GET(req: Request) {
         line_items,
         success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/bag`,
-
         metadata: {
           checkoutType: "cart",
           cartId: cart?.id ?? "",
@@ -237,10 +243,11 @@ export async function GET(req: Request) {
       };
 
       if (
-  promo &&
-  ((promo.percentOff && promo.percentOff > 0) ||
-    (promo.amountOffCents && promo.amountOffCents > 0))
-) {
+        promo &&
+        ((promo.percentOff && promo.percentOff > 0) ||
+          (promo.amountOffCents && promo.amountOffCents > 0))
+      ) {
+        sessionParams.discounts = [
           {
             coupon: await createStripeCoupon(stripe, {
               code: promo.code,
@@ -355,7 +362,6 @@ export async function GET(req: Request) {
           },
         },
       ],
-
       payment_intent_data: {
         application_fee_amount: platformFeeCents,
         transfer_data: {
@@ -368,14 +374,12 @@ export async function GET(req: Request) {
           platformFeeCents: String(platformFeeCents),
         },
       },
-
       metadata: {
         checkoutType: "single",
         bundleId: bundle.id,
         vendorId: bundle.vendorId,
         platformFeeCents: String(platformFeeCents),
       },
-
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/bag`,
     });
