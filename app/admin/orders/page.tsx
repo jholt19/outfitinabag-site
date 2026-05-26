@@ -14,12 +14,35 @@ function fmtDate(date: Date) {
   return new Date(date).toLocaleString();
 }
 
+function fulfillmentColor(status?: string | null) {
+  switch (status) {
+    case "delivered":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+
+    case "shipped":
+      return "border-blue-200 bg-blue-50 text-blue-700";
+
+    case "processing":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+
+    case "cancelled":
+      return "border-red-200 bg-red-50 text-red-700";
+
+    default:
+      return "border-black/10 bg-[#f7f5f2] text-black";
+  }
+}
+
 export default async function AdminOrdersPage() {
   await requireAdmin();
 
   const orders = await prisma.order.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: {
+      createdAt: "desc",
+    },
+
     take: 50,
+
     include: {
       items: {
         include: {
@@ -56,8 +79,8 @@ export default async function AdminOrdersPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Review customer orders, vendor payouts, platform fees, and payment
-              status.
+              Manage customer purchases, fulfillment, tracking, payouts, and
+              shipment activity.
             </p>
           </div>
 
@@ -102,7 +125,9 @@ export default async function AdminOrdersPage() {
       <section className="mt-8 space-y-5">
         {orders.length === 0 ? (
           <div className="rounded-[24px] border border-black/10 bg-white p-6">
-            <p className="m-0 font-semibold text-black">No orders yet.</p>
+            <p className="m-0 font-semibold text-black">
+              No orders yet.
+            </p>
 
             <p className="mt-2 text-sm text-neutral-600">
               Orders will appear here once customers complete checkout.
@@ -115,39 +140,71 @@ export default async function AdminOrdersPage() {
             return (
               <div
                 key={order.id}
-                className="rounded-[28px] border border-black/10 bg-white p-6 shadow-sm"
+                className="rounded-[30px] border border-black/10 bg-white p-6 shadow-sm"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                      {fmtDate(order.createdAt)}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                        {fmtDate(order.createdAt)}
+                      </div>
+
+                      <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-700">
+                        #{order.orderNumber ?? order.id.slice(0, 8)}
+                      </div>
                     </div>
 
-                    <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
+                    <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-black">
                       {firstItem?.title ?? "Order"}
                     </h2>
 
-                    <p className="mt-2 text-sm text-neutral-600">
-                      Customer: {order.email ?? "—"}
-                    </p>
+                    <div className="mt-4 space-y-1 text-sm text-neutral-600">
+                      <p>
+                        Customer:{" "}
+                        <span className="font-medium text-black">
+                          {order.email ?? "—"}
+                        </span>
+                      </p>
 
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Vendor: {firstItem?.vendor?.name ?? "—"}
-                    </p>
+                      <p>
+                        Vendor:{" "}
+                        <span className="font-medium text-black">
+                          {firstItem?.vendor?.name ?? "—"}
+                        </span>
+                      </p>
+
+                      <p>
+                        Items:{" "}
+                        <span className="font-medium text-black">
+                          {order.items.length}
+                        </span>
+                      </p>
+                    </div>
                   </div>
 
-                  <div
-                    className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
-                      order.status === "paid"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-black/10 bg-[#f7f5f2] text-black"
-                    }`}
-                  >
-                    {order.status ?? "unknown"}
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
+                        order.status === "paid"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-black/10 bg-[#f7f5f2] text-black"
+                      }`}
+                    >
+                      Payment: {order.status ?? "unknown"}
+                    </div>
+
+                    <div
+                      className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${fulfillmentColor(
+                        firstItem?.fulfillmentStatus
+                      )}`}
+                    >
+                      Fulfillment:{" "}
+                      {firstItem?.fulfillmentStatus ?? "pending"}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-4">
+                <div className="mt-6 grid gap-4 md:grid-cols-4">
                   <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
                       Total Paid
@@ -183,28 +240,58 @@ export default async function AdminOrdersPage() {
                       Payout Status
                     </div>
 
-                    <div className="mt-2 text-lg font-semibold text-black">
-                      {order.payoutStatus}
+                    <div className="mt-2 text-lg font-semibold capitalize text-black">
+                      {order.payoutStatus ?? "pending"}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                    Stripe Session
+                <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                      Shipment Tracking
+                    </div>
+
+                    <div className="mt-4 space-y-3 text-sm">
+                      <div>
+                        <div className="text-neutral-500">
+                          Tracking Number
+                        </div>
+
+                        <div className="mt-1 font-medium text-black">
+                          {firstItem?.trackingNumber ?? "Not Added"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-neutral-500">
+                          Carrier
+                        </div>
+
+                        <div className="mt-1 font-medium text-black">
+                          {firstItem?.trackingCarrier ?? "Not Added"}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="mt-2 break-all font-mono text-xs text-neutral-700">
-                    {order.stripeSessionId}
+                  <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                      Stripe Session
+                    </div>
+
+                    <div className="mt-3 break-all rounded-xl bg-white p-3 font-mono text-xs text-neutral-700">
+                      {order.stripeSessionId}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     href={`/admin/orders/${order.id}`}
                     className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
                   >
-                    View Order Details
+                    Manage Order
                   </Link>
 
                   <Link
