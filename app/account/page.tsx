@@ -22,6 +22,7 @@ function statusColor(status?: string | null) {
   switch ((status || "").toUpperCase()) {
     case "PAID":
     case "COMPLETE":
+    case "DELIVERED":
       return "border-emerald-200 bg-emerald-50 text-emerald-700";
 
     case "PROCESSING":
@@ -36,6 +37,29 @@ function statusColor(status?: string | null) {
     default:
       return "border-black/10 bg-[#f7f5f2] text-neutral-700";
   }
+}
+
+function trackingLink(
+  carrier?: string | null,
+  tracking?: string | null
+) {
+  if (!carrier || !tracking) return null;
+
+  const c = carrier.toUpperCase();
+
+  if (c.includes("UPS")) {
+    return `https://www.ups.com/track?tracknum=${tracking}`;
+  }
+
+  if (c.includes("USPS")) {
+    return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`;
+  }
+
+  if (c.includes("FEDEX")) {
+    return `https://www.fedex.com/fedextrack/?tracknumbers=${tracking}`;
+  }
+
+  return null;
 }
 
 export default async function AccountPage() {
@@ -107,7 +131,6 @@ export default async function AccountPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
-      {/* HERO */}
       <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
         <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
           My Account
@@ -138,7 +161,6 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      {/* STATS */}
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         <div className="rounded-[24px] border border-black/10 bg-white p-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
@@ -171,18 +193,15 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      {/* ORDER HISTORY */}
       <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-              Purchase History
-            </div>
-
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-              Recent Orders
-            </h2>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+            Purchase History
           </div>
+
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+            Recent Orders
+          </h2>
         </div>
 
         {orders.length === 0 ? (
@@ -190,11 +209,11 @@ export default async function AccountPage() {
             You have not placed any orders yet.
           </div>
         ) : (
-          <div className="mt-6 space-y-5">
+          <div className="mt-6 space-y-6">
             {orders.map((order) => (
               <article
                 key={order.id}
-                className="rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5"
+                className="rounded-[28px] border border-black/10 bg-[#f7f5f2] p-6"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -202,11 +221,11 @@ export default async function AccountPage() {
                       Order Number
                     </div>
 
-                    <div className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-black">
+                    <div className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
                       OIAB-{order.orderNumber ?? "—"}
                     </div>
 
-                    <div className="mt-2 text-sm text-neutral-600">
+                    <div className="mt-3 text-sm text-neutral-600">
                       {fmtDate(order.createdAt)}
                     </div>
                   </div>
@@ -220,53 +239,108 @@ export default async function AccountPage() {
                       {order.status || "Processing"}
                     </div>
 
-                    <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-black">
+                    <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-black">
                       {fmtCents(order.amountTotal)}
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-6 grid gap-4">
-                  {order.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-4 rounded-2xl border border-black/10 bg-white p-4"
-                    >
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="h-20 w-20 rounded-2xl object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#f7f5f2] text-xs text-neutral-400">
-                          No image
-                        </div>
-                      )}
+                  {order.items.map((item) => {
+                    const trackUrl = trackingLink(
+                      item.trackingCarrier,
+                      item.trackingNumber
+                    );
 
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-lg font-semibold text-black">
-                          {item.title}
-                        </div>
-
-                        <div className="mt-1 text-sm text-neutral-600">
-                          Quantity: {item.quantity}
-                        </div>
-
-                        <div className="mt-1 text-sm text-neutral-600">
-                          {fmtCents(item.unitPrice)}
-                        </div>
-                      </div>
-
+                    return (
                       <div
-                        className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${statusColor(
-                          item.fulfillmentStatus
-                        )}`}
+                        key={item.id}
+                        className="rounded-[24px] border border-black/10 bg-white p-5"
                       >
-                        {item.fulfillmentStatus || "Pending"}
+                        <div className="flex flex-wrap gap-5">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.title}
+                              className="h-24 w-24 rounded-2xl object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[#f7f5f2] text-xs text-neutral-400">
+                              No image
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                              <div>
+                                <div className="text-xl font-semibold text-black">
+                                  {item.title}
+                                </div>
+
+                                <div className="mt-2 text-sm text-neutral-600">
+                                  Quantity: {item.quantity}
+                                </div>
+
+                                <div className="mt-1 text-sm text-neutral-600">
+                                  {fmtCents(item.unitPrice)}
+                                </div>
+                              </div>
+
+                              <div
+                                className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${statusColor(
+                                  item.fulfillmentStatus
+                                )}`}
+                              >
+                                {item.fulfillmentStatus || "Pending"}
+                              </div>
+                            </div>
+
+                            {(item.trackingNumber ||
+                              item.trackingCarrier) && (
+                              <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
+                                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                                  Shipment Tracking
+                                </div>
+
+                                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                  <div>
+                                    <div className="text-xs uppercase tracking-[0.12em] text-neutral-500">
+                                      Carrier
+                                    </div>
+
+                                    <div className="mt-1 font-semibold text-black">
+                                      {item.trackingCarrier || "—"}
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <div className="text-xs uppercase tracking-[0.12em] text-neutral-500">
+                                      Tracking Number
+                                    </div>
+
+                                    <div className="mt-1 break-all font-semibold text-black">
+                                      {item.trackingNumber || "—"}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {trackUrl ? (
+                                  <a
+                                    href={trackUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-4 inline-flex rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                  >
+                                    Track Package
+                                  </a>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             ))}
@@ -274,18 +348,15 @@ export default async function AccountPage() {
         )}
       </section>
 
-      {/* SAVED OUTFITS */}
       <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-              Wishlist
-            </div>
-
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-              Saved Outfits
-            </h2>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+            Wishlist
           </div>
+
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+            Saved Outfits
+          </h2>
         </div>
 
         {savedOutfits.length === 0 ? (
