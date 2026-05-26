@@ -43,7 +43,9 @@ export async function POST(req: Request) {
     }
 
     const vendor = await prisma.vendor.findFirst({
-      where: { clerkUserId: userId },
+      where: {
+        clerkUserId: userId,
+      },
     });
 
     if (!vendor) {
@@ -102,17 +104,9 @@ export async function POST(req: Request) {
       },
     });
 
-    const statusChanged =
-      existingItem.fulfillmentStatus !== updatedItem.fulfillmentStatus;
-
-    const trackingChanged =
-      existingItem.trackingNumber !== updatedItem.trackingNumber ||
-      existingItem.trackingCarrier !== updatedItem.trackingCarrier;
-
     const shouldEmailCustomer =
-      updatedItem.order?.email &&
-      (fulfillmentStatus === "SHIPPED" || fulfillmentStatus === "DELIVERED") &&
-      (statusChanged || trackingChanged);
+      Boolean(updatedItem.order?.email) &&
+      (fulfillmentStatus === "SHIPPED" || fulfillmentStatus === "DELIVERED");
 
     if (shouldEmailCustomer && process.env.RESEND_API_KEY) {
       const trackUrl = trackingLink(
@@ -125,8 +119,8 @@ export async function POST(req: Request) {
         to: updatedItem.order.email!,
         subject:
           fulfillmentStatus === "DELIVERED"
-            ? `Your OutfitInABag order was delivered`
-            : `Your OutfitInABag order has shipped`,
+            ? "Your OutfitInABag order was delivered"
+            : "Your OutfitInABag order has shipped",
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
             <h2>Order Update</h2>
@@ -151,7 +145,11 @@ export async function POST(req: Request) {
 
             ${
               trackUrl
-                ? `<p><a href="${trackUrl}" style="display:inline-block;background:#000;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:bold;">Track Package</a></p>`
+                ? `<p>
+                    <a href="${trackUrl}" style="display:inline-block;background:#000;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:bold;">
+                      Track Package
+                    </a>
+                  </p>`
                 : ""
             }
 
