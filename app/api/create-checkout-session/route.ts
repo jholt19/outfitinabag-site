@@ -59,10 +59,15 @@ export async function GET(req: Request) {
     const bundleId = url.searchParams.get("bundleId");
     const cartCheckout = url.searchParams.get("cart") === "true";
 
-    const promoCodeInput = String(url.searchParams.get("promo") || "")
-      .trim()
-      .toUpperCase();
-
+    const promoCodeInput = String(
+  url.searchParams.get("promo") ||
+    url.searchParams.get("promoCode") ||
+    url.searchParams.get("discount") ||
+    ""
+)
+  .trim()
+  .toUpperCase();
+  
     const baseUrl = getBaseUrl();
 
     const { userId } = await auth();

@@ -353,12 +353,12 @@ export default async function BagPage({
             <input type="hidden" name="cart" value="true" />
 
             {promo ? (
-              <input
-                type="hidden"
-                name="promo"
-                value={promo.code}
-              />
-            ) : null}
+  <>
+    <input type="hidden" name="promo" value={promo.code} />
+    <input type="hidden" name="promoCode" value={promo.code} />
+    <input type="hidden" name="discount" value={promo.code} />
+  </>
+) : null}
 
             <button
               type="submit"
