@@ -18,7 +18,10 @@ export default async function BagPage({
   }>;
 }) {
   const params = searchParams ? await searchParams : {};
-  const promoCode = String(params?.promo || "").trim().toUpperCase();
+
+  const promoCode = String(params?.promo || "")
+    .trim()
+    .toUpperCase();
 
   const { userId } = await auth();
 
@@ -41,9 +44,13 @@ export default async function BagPage({
 
   const cart = await prisma.cart.findUnique({
     where: { userId },
+
     include: {
       items: {
-        orderBy: { createdAt: "desc" },
+        orderBy: {
+          createdAt: "desc",
+        },
+
         include: {
           bundle: {
             include: {
@@ -83,11 +90,14 @@ export default async function BagPage({
     });
 
     if (promo) {
-      if (promo.percentOff) {
+      if (promo.percentOff && promo.percentOff > 0) {
         discountAmount = Math.round(
           subtotal * (promo.percentOff / 100)
         );
-      } else if (promo.amountOffCents) {
+      } else if (
+        promo.amountOffCents &&
+        promo.amountOffCents > 0
+      ) {
         discountAmount = promo.amountOffCents;
       }
 
@@ -122,6 +132,7 @@ export default async function BagPage({
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
+      {/* HERO */}
       <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
         <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
           Your Bag
@@ -138,6 +149,7 @@ export default async function BagPage({
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
+        {/* CART ITEMS */}
         <div className="space-y-5">
           {items.map((item) => (
             <article
@@ -191,7 +203,11 @@ export default async function BagPage({
                     method="POST"
                     className="flex items-center gap-2"
                   >
-                    <input type="hidden" name="cartItemId" value={item.id} />
+                    <input
+                      type="hidden"
+                      name="cartItemId"
+                      value={item.id}
+                    />
 
                     <label className="text-sm font-semibold text-neutral-600">
                       Qty
@@ -226,7 +242,11 @@ export default async function BagPage({
                   </form>
 
                   <form action={removeCartItem}>
-                    <input type="hidden" name="cartItemId" value={item.id} />
+                    <input
+                      type="hidden"
+                      name="cartItemId"
+                      value={item.id}
+                    />
 
                     <button
                       type="submit"
@@ -241,11 +261,13 @@ export default async function BagPage({
           ))}
         </div>
 
+        {/* ORDER SUMMARY */}
         <aside className="h-fit rounded-[28px] border border-black/10 bg-white p-6">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
             Order Summary
           </div>
 
+          {/* PROMO FORM */}
           <div className="mt-5">
             <form method="GET" action="/bag" className="grid gap-3">
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
@@ -283,10 +305,14 @@ export default async function BagPage({
             )}
           </div>
 
+          {/* TOTALS */}
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between border-b border-black/10 pb-4 text-sm">
               <span className="text-neutral-600">Subtotal</span>
-              <strong className="text-black">{fmtCents(subtotal)}</strong>
+
+              <strong className="text-black">
+                {fmtCents(subtotal)}
+              </strong>
             </div>
 
             {discountAmount > 0 && (
@@ -303,6 +329,7 @@ export default async function BagPage({
 
             <div className="flex items-center justify-between border-b border-black/10 pb-4 text-sm">
               <span className="text-neutral-600">Shipping</span>
+
               <strong className="text-black">
                 Calculated at checkout
               </strong>
@@ -317,14 +344,29 @@ export default async function BagPage({
             </div>
           </div>
 
-          <Link
-            href={`/api/create-checkout-session?cart=true${
-              promo ? `&promo=${promo.code}` : ""
-            }`}
-            className="mt-6 inline-flex w-full justify-center rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
+          {/* CHECKOUT FORM */}
+          <form
+            action="/api/create-checkout-session"
+            method="GET"
+            className="mt-6"
           >
-            Checkout Securely
-          </Link>
+            <input type="hidden" name="cart" value="true" />
+
+            {promo ? (
+              <input
+                type="hidden"
+                name="promo"
+                value={promo.code}
+              />
+            ) : null}
+
+            <button
+              type="submit"
+              className="inline-flex w-full justify-center rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              Checkout Securely
+            </button>
+          </form>
 
           <Link
             href="/outfits"
