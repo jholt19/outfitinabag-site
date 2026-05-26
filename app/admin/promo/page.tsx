@@ -378,16 +378,37 @@ export default async function AdminPromoPage({
                           className="rounded-xl border border-black/10 px-4 py-3 text-sm text-black"
                         />
 
-                        <div className="grid grid-cols-3 gap-2">
-                          <button
-                            type="submit"
-                            className="rounded-full bg-black px-4 py-3 text-xs font-semibold text-white"
-                          >
-                            Save
-                          </button>
-                      </form>
+                        <button
+  type="submit"
+  className="rounded-full bg-black px-4 py-3 text-xs font-semibold text-white"
+>
+  Save Changes
+</button>
+</form>
 
-                      <form action={togglePromoCode}>
+<div className="mt-3 grid grid-cols-2 gap-2">
+  <form action={togglePromoCode}>
+    <input type="hidden" name="promoId" value={promo.id} />
+
+    <button
+      type="submit"
+      className="w-full rounded-full border border-black/15 bg-white px-4 py-3 text-xs font-semibold text-black"
+    >
+      {promo.isActive ? "Disable" : "Enable"}
+    </button>
+  </form>
+
+  <form action={deletePromoCode}>
+    <input type="hidden" name="promoId" value={promo.id} />
+
+    <button
+      type="submit"
+      className="w-full rounded-full border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700"
+    >
+      Delete
+    </button>
+  </form>
+</div>
                         <input
                           type="hidden"
                           name="promoId"
