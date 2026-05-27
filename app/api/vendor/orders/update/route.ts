@@ -62,8 +62,6 @@ export async function POST(req: Request) {
 
     const trackingNumber = String(formData.get("trackingNumber") || "").trim();
 
-    const trackingCarrier = String(formData.get("trackingCarrier") || "").trim();
-
     if (!VALID_STATUSES.includes(fulfillmentStatus)) {
       return NextResponse.redirect(
         new URL("/vendor/orders?error=invalid-status", req.url)
