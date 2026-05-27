@@ -151,7 +151,7 @@ export async function POST(req: Request) {
       });
 
       const result = await resend.emails.send({
-        from: "OutfitInABag <orders@outfitinabag.com>",
+        from: "OutfitInABag <onboarding@resend.dev>",
         to: updatedItem.order.email!,
         subject:
           fulfillmentStatus === "DELIVERED"
