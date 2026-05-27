@@ -60,13 +60,9 @@ export async function POST(req: Request) {
       formData.get("fulfillmentStatus") || "PENDING"
     ).toUpperCase();
 
-    const trackingNumber = String(
-      formData.get("trackingNumber") || ""
-    ).trim();
+    const trackingNumber = String(formData.get("trackingNumber") || "").trim();
 
-    const trackingCarrier = String(
-      formData.get("trackingCarrier") || ""
-    ).trim();
+    const trackingCarrier = String(formData.get("trackingCarrier") || "").trim();
 
     if (!VALID_STATUSES.includes(fulfillmentStatus)) {
       return NextResponse.redirect(
