@@ -36,6 +36,7 @@ export default async function VendorDashboardPage() {
           <h1 className="text-4xl font-semibold tracking-[-0.04em]">
             Sign in required
           </h1>
+
           <p className="mt-3 text-neutral-600">
             Please sign in to view your vendor dashboard.
           </p>
@@ -57,8 +58,7 @@ export default async function VendorDashboardPage() {
           </h1>
 
           <p className="mt-3 text-neutral-600">
-            Claim your vendor account before viewing orders, payouts, and
-            dashboard analytics.
+            Claim your vendor account before viewing orders and analytics.
           </p>
 
           <Link
@@ -73,6 +73,7 @@ export default async function VendorDashboardPage() {
   }
 
   const vendorId = selectedVendor.id;
+
   const vendors = [selectedVendor];
 
   const bundles = await prisma.bundle.findMany({
@@ -82,35 +83,67 @@ export default async function VendorDashboardPage() {
 
   const items = await prisma.orderItem.findMany({
     where: { vendorId },
-    include: { order: true, bundle: true },
-    orderBy: { createdAt: "desc" },
-    take: 5,
+
+    include: {
+      order: true,
+      bundle: true,
+    },
+
+    orderBy: {
+      createdAt: "desc",
+    },
+
+    take: 25,
   });
 
-  let total = 0;
-  let pending = 0;
-  let paid = 0;
+  let totalRevenue = 0;
+  let pendingPayouts = 0;
+  let paidOut = 0;
+
+  let shippedCount = 0;
+  let deliveredCount = 0;
+  let processingCount = 0;
+
+  const bundleSales: Record<string, number> = {};
 
   for (const item of items) {
     const amount = item.vendorPayoutCents ?? 0;
-    total += amount;
+
+    totalRevenue += amount;
 
     if (item.payoutStatus === "PAID") {
-      paid += amount;
+      paidOut += amount;
     } else {
-      pending += amount;
+      pendingPayouts += amount;
     }
+
+    if (item.fulfillmentStatus === "SHIPPED") {
+      shippedCount++;
+    }
+
+    if (item.fulfillmentStatus === "DELIVERED") {
+      deliveredCount++;
+    }
+
+    if (
+      item.fulfillmentStatus === "PROCESSING" ||
+      item.fulfillmentStatus === "PENDING"
+    ) {
+      processingCount++;
+    }
+
+    bundleSales[item.title] =
+      (bundleSales[item.title] || 0) + item.quantity;
   }
 
-  const earnings = {
-    total,
-    pending,
-    paid,
-    count: items.length,
-  };
+  const averageOrderValue =
+    items.length > 0
+      ? Math.round(totalRevenue / items.length)
+      : 0;
 
-  const recentOrders = items;
-  const vendorName = selectedVendor.name;
+  const topSellingBundle =
+    Object.entries(bundleSales).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    "No sales yet";
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
@@ -122,11 +155,12 @@ export default async function VendorDashboardPage() {
             </div>
 
             <h1 className="mt-5 text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
-              {vendorName}
+              {selectedVendor.name}
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Manage bundles, inventory, payouts, sales, and your storefront.
+              Track sales, payouts, fulfillment, inventory, and recent customer
+              activity.
             </p>
           </div>
 
@@ -157,57 +191,14 @@ export default async function VendorDashboardPage() {
         <VendorPicker vendors={vendors} vendorId={vendorId} />
       </section>
 
-      <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-              Stripe Connect Status
-            </div>
-
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-              Payout Readiness
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-neutral-600">
-              This shows whether this vendor can accept charges and receive
-              payouts through Stripe Connect.
-            </p>
-          </div>
-
-          <Link
-            href="/vendor/connect"
-            className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-          >
-            Manage Stripe
-          </Link>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {statusBadge("Account Connected", !!selectedVendor.stripeAccountId)}
-          {statusBadge("Onboarding Done", selectedVendor.stripeOnboardingDone)}
-          {statusBadge("Charges Enabled", selectedVendor.stripeChargesEnabled)}
-          {statusBadge("Payouts Enabled", selectedVendor.stripePayoutsEnabled)}
-        </div>
-
-        {selectedVendor.stripeAccountId ? (
-          <div className="mt-5 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Stripe Account ID
-            </div>
-            <div className="mt-2 break-all font-mono text-sm text-black">
-              {selectedVendor.stripeAccountId}
-            </div>
-          </div>
-        ) : null}
-      </section>
-
       <section className="mt-8 grid gap-4 md:grid-cols-4">
         <div className="rounded-[24px] border border-black/10 bg-white p-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Total Revenue
           </div>
+
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            {fmtCents(earnings.total)}
+            {fmtCents(totalRevenue)}
           </div>
         </div>
 
@@ -215,8 +206,9 @@ export default async function VendorDashboardPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Pending Payouts
           </div>
+
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            {fmtCents(earnings.pending)}
+            {fmtCents(pendingPayouts)}
           </div>
         </div>
 
@@ -224,244 +216,61 @@ export default async function VendorDashboardPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Paid Out
           </div>
+
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            {fmtCents(earnings.paid)}
+            {fmtCents(paidOut)}
           </div>
         </div>
 
         <div className="rounded-[24px] border border-black/10 bg-white p-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-            Sales Count
+            Avg Order Value
           </div>
+
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            {earnings.count}
+            {fmtCents(averageOrderValue)}
           </div>
         </div>
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_420px]">
-        <div className="rounded-[28px] border border-black/10 bg-white p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                Bundles & Inventory
-              </div>
-
-              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-                My Bundles
-              </h2>
-            </div>
-
-            <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
-              {bundles.length} Total
-            </div>
+      <section className="mt-4 grid gap-4 md:grid-cols-4">
+        <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+            Delivered
           </div>
 
-          <div className="mt-6 space-y-4">
-            {bundles.length === 0 ? (
-              <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
-                No bundles yet.
-              </div>
-            ) : (
-              bundles.map((bundle) => {
-                const status = bundle.published
-                  ? "Published"
-                  : bundle.submittedForReview
-                    ? "Awaiting Review"
-                    : "Draft";
-
-                const isSoldOut = bundle.stock <= 0;
-                const isLowStock =
-                  bundle.stock > 0 &&
-                  bundle.stock <= bundle.lowStockThreshold;
-
-                return (
-                  <div
-                    key={bundle.id}
-                    className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                          {bundle.occasion}
-                        </div>
-
-                        <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
-                          {bundle.title}
-                        </h3>
-
-                        <p className="mt-2 text-sm text-neutral-600">
-                          Price:{" "}
-                          <strong>
-                            ${((bundle.price ?? 0) / 100).toFixed(2)}
-                          </strong>
-                        </p>
-
-                        <p className="mt-1 text-sm text-neutral-600">
-                          Status: <strong>{status}</strong>
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {isSoldOut ? (
-                          <span className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
-                            Sold Out
-                          </span>
-                        ) : isLowStock ? (
-                          <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
-                            Low Stock
-                          </span>
-                        ) : (
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                            In Stock
-                          </span>
-                        )}
-
-                        {!bundle.published && !bundle.submittedForReview ? (
-                          <form action={submitBundleForReview}>
-                            <input
-                              type="hidden"
-                              name="bundleId"
-                              value={bundle.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="vendorId"
-                              value={vendorId}
-                            />
-
-                            <button
-                              type="submit"
-                              className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                            >
-                              Submit for Review
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4">
-                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                        Inventory
-                      </div>
-
-                      <div className="mt-2 text-sm text-neutral-600">
-                        Current Stock:{" "}
-                        <strong
-                          className={
-                            isSoldOut
-                              ? "text-red-600"
-                              : isLowStock
-                                ? "text-amber-600"
-                                : "text-black"
-                          }
-                        >
-                          {bundle.stock}
-                        </strong>
-                      </div>
-
-                      <form
-                        action={updateBundleInventory}
-                        className="mt-4 grid gap-3"
-                      >
-                        <input
-                          type="hidden"
-                          name="bundleId"
-                          value={bundle.id}
-                        />
-
-                        <div>
-                          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-                            Stock Quantity
-                          </label>
-
-                          <input
-                            type="number"
-                            name="stock"
-                            min="0"
-                            defaultValue={bundle.stock}
-                            className="mt-1 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-                            Low Stock Alert
-                          </label>
-
-                          <input
-                            type="number"
-                            name="lowStockThreshold"
-                            min="0"
-                            defaultValue={bundle.lowStockThreshold}
-                            className="mt-1 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black"
-                          />
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                        >
-                          Update Inventory
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+          <div className="mt-2 text-3xl font-semibold text-emerald-900">
+            {deliveredCount}
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-black/10 bg-white p-6">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-            Recent Sales
+        <div className="rounded-[24px] border border-blue-200 bg-blue-50 p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+            Shipped
           </div>
 
-          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            Activity
-          </h2>
+          <div className="mt-2 text-3xl font-semibold text-blue-900">
+            {shippedCount}
+          </div>
+        </div>
 
-          <div className="mt-6 space-y-4">
-            {recentOrders.length === 0 ? (
-              <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
-                No sales yet.
-              </div>
-            ) : (
-              recentOrders.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-4"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="font-semibold text-black">
-                        {item.title}
-                      </div>
+        <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+            Processing
+          </div>
 
-                      <div className="mt-1 text-sm text-neutral-600">
-                        {item.order?.email ?? "Customer"}
-                      </div>
+          <div className="mt-2 text-3xl font-semibold text-amber-900">
+            {processingCount}
+          </div>
+        </div>
 
-                      <div className="mt-1 text-xs text-neutral-500">
-                        {new Date(item.createdAt).toLocaleString()}
-                      </div>
-                    </div>
+        <div className="rounded-[24px] border border-black/10 bg-white p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Top Seller
+          </div>
 
-                    <div className="text-right">
-                      <div className="text-lg font-semibold text-black">
-                        {fmtCents(item.vendorPayoutCents ?? 0)}
-                      </div>
-
-                      <div className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-                        {item.payoutStatus}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="mt-2 text-lg font-semibold text-black">
+            {topSellingBundle}
           </div>
         </div>
       </section>
