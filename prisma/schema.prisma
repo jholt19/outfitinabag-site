@@ -118,6 +118,13 @@ model Vendor {
   status    String  @default("pending")
   apiKey    String? @unique
 
+  logo        String?
+  bannerImage String?
+  bio         String?
+  category    String?
+  instagram   String?
+  website     String?
+
   clerkUserId String? @unique
 
   stripeAccountId      String? @unique
