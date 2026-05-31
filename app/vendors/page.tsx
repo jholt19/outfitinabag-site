@@ -77,6 +77,7 @@ export default async function VendorsPage() {
           <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {vendors.map((vendor) => {
               const featuredBundle = vendor.bundles?.[0];
+              const cardImage = vendor.bannerImage || featuredBundle?.image;
 
               return (
                 <Link
@@ -85,9 +86,9 @@ export default async function VendorsPage() {
                   className="overflow-hidden rounded-[28px] border border-black/10 bg-white transition hover:-translate-y-1 hover:shadow-xl"
                 >
                   <div className="relative h-[320px] bg-[#f7f5f2]">
-                    {featuredBundle?.image ? (
+                    {cardImage ? (
                       <Image
-                        src={featuredBundle.image}
+                        src={cardImage}
                         alt={vendor.name}
                         fill
                         className="object-cover"
@@ -97,20 +98,31 @@ export default async function VendorsPage() {
                         No vendor image
                       </div>
                     )}
+
+                    {vendor.logo ? (
+                      <div className="absolute bottom-4 left-4 h-16 w-16 overflow-hidden rounded-2xl border border-white/70 bg-white shadow-lg">
+                        <Image
+                          src={vendor.logo}
+                          alt={`${vendor.name} logo`}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="p-5">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                      Vendor Storefront
+                      {vendor.category || "Vendor Storefront"}
                     </div>
 
                     <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-black">
                       {vendor.name}
                     </h3>
 
-                    <p className="mt-3 text-sm leading-6 text-neutral-600">
-                      Explore curated outfit collections, featured styles, and
-                      premium looks from this vendor.
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
+                      {vendor.bio ||
+                        "Explore curated outfit collections, featured styles, and premium looks from this vendor."}
                     </p>
 
                     <div className="mt-5 inline-flex rounded-full bg-black px-5 py-3 text-sm font-semibold text-white">

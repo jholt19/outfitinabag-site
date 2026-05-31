@@ -41,7 +41,7 @@ export default async function VendorStorefrontPage({
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-4 sm:px-6 lg:px-8">
-      <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8 lg:p-10">
+      <section className="overflow-hidden rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8 lg:p-10">
         <Link
           href="/vendors"
           className="inline-flex rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
@@ -49,18 +49,71 @@ export default async function VendorStorefrontPage({
           ← Back to Vendors
         </Link>
 
+        {vendor.bannerImage ? (
+          <div className="relative mt-6 h-[260px] overflow-hidden rounded-[28px] bg-white">
+            <Image
+              src={vendor.bannerImage}
+              alt={vendor.name}
+              fill
+              className="object-cover"
+            />
+          </div>
+        ) : null}
+
         <div className="mt-8 max-w-3xl">
           <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
             Vendor Storefront
           </div>
 
+          {vendor.logo ? (
+            <div className="relative mt-6 h-24 w-24 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm">
+              <Image
+                src={vendor.logo}
+                alt={`${vendor.name} logo`}
+                fill
+                className="object-cover"
+              />
+            </div>
+          ) : null}
+
           <h1 className="mt-5 text-[clamp(2.7rem,7vw,5.5rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
             {vendor.name}
           </h1>
 
+          {vendor.category ? (
+            <div className="mt-4 inline-flex rounded-full bg-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white">
+              {vendor.category}
+            </div>
+          ) : null}
+
           <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-600 sm:text-lg">
-            Explore complete outfit bundles curated by {vendor.name}.
+            {vendor.bio ||
+              `Explore complete outfit bundles curated by ${vendor.name}.`}
           </p>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            {vendor.instagram ? (
+              <a
+                href={vendor.instagram}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+              >
+                Instagram
+              </a>
+            ) : null}
+
+            {vendor.website ? (
+              <a
+                href={vendor.website}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+              >
+                Website
+              </a>
+            ) : null}
+          </div>
         </div>
       </section>
 
