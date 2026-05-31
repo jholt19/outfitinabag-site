@@ -58,7 +58,8 @@ export default async function VendorDashboardPage() {
           </h1>
 
           <p className="mt-3 text-neutral-600">
-            Claim your vendor account before viewing orders and analytics.
+            Claim your vendor account before viewing orders, payouts, and
+            dashboard analytics.
           </p>
 
           <Link
@@ -73,7 +74,6 @@ export default async function VendorDashboardPage() {
   }
 
   const vendorId = selectedVendor.id;
-
   const vendors = [selectedVendor];
 
   const bundles = await prisma.bundle.findMany({
@@ -83,23 +83,14 @@ export default async function VendorDashboardPage() {
 
   const items = await prisma.orderItem.findMany({
     where: { vendorId },
-
-    include: {
-      order: true,
-      bundle: true,
-    },
-
-    orderBy: {
-      createdAt: "desc",
-    },
-
+    include: { order: true, bundle: true },
+    orderBy: { createdAt: "desc" },
     take: 25,
   });
 
   let totalRevenue = 0;
   let pendingPayouts = 0;
   let paidOut = 0;
-
   let shippedCount = 0;
   let deliveredCount = 0;
   let processingCount = 0;
@@ -108,7 +99,6 @@ export default async function VendorDashboardPage() {
 
   for (const item of items) {
     const amount = item.vendorPayoutCents ?? 0;
-
     totalRevenue += amount;
 
     if (item.payoutStatus === "PAID") {
@@ -117,13 +107,8 @@ export default async function VendorDashboardPage() {
       pendingPayouts += amount;
     }
 
-    if (item.fulfillmentStatus === "SHIPPED") {
-      shippedCount++;
-    }
-
-    if (item.fulfillmentStatus === "DELIVERED") {
-      deliveredCount++;
-    }
+    if (item.fulfillmentStatus === "SHIPPED") shippedCount++;
+    if (item.fulfillmentStatus === "DELIVERED") deliveredCount++;
 
     if (
       item.fulfillmentStatus === "PROCESSING" ||
@@ -132,14 +117,11 @@ export default async function VendorDashboardPage() {
       processingCount++;
     }
 
-    bundleSales[item.title] =
-      (bundleSales[item.title] || 0) + item.quantity;
+    bundleSales[item.title] = (bundleSales[item.title] || 0) + item.quantity;
   }
 
   const averageOrderValue =
-    items.length > 0
-      ? Math.round(totalRevenue / items.length)
-      : 0;
+    items.length > 0 ? Math.round(totalRevenue / items.length) : 0;
 
   const topSellingBundle =
     Object.entries(bundleSales).sort((a, b) => b[1] - a[1])[0]?.[0] ||
@@ -159,12 +141,18 @@ export default async function VendorDashboardPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Track sales, payouts, fulfillment, inventory, and recent customer
-              activity.
+              Manage bundles, inventory, payouts, sales, and your storefront.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
+            <Link
+              href="/vendor/profile"
+              className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+            >
+              Edit Profile
+            </Link>
+
             <Link
               href="/vendor/orders"
               className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
@@ -191,12 +179,44 @@ export default async function VendorDashboardPage() {
         <VendorPicker vendors={vendors} vendorId={vendorId} />
       </section>
 
+      <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+              Stripe Connect Status
+            </div>
+
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+              Payout Readiness
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-neutral-600">
+              This shows whether this vendor can accept charges and receive
+              payouts through Stripe Connect.
+            </p>
+          </div>
+
+          <Link
+            href="/vendor/connect"
+            className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            Manage Stripe
+          </Link>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {statusBadge("Account Connected", !!selectedVendor.stripeAccountId)}
+          {statusBadge("Onboarding Done", selectedVendor.stripeOnboardingDone)}
+          {statusBadge("Charges Enabled", selectedVendor.stripeChargesEnabled)}
+          {statusBadge("Payouts Enabled", selectedVendor.stripePayoutsEnabled)}
+        </div>
+      </section>
+
       <section className="mt-8 grid gap-4 md:grid-cols-4">
         <div className="rounded-[24px] border border-black/10 bg-white p-5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Total Revenue
           </div>
-
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(totalRevenue)}
           </div>
@@ -206,7 +226,6 @@ export default async function VendorDashboardPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Pending Payouts
           </div>
-
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(pendingPayouts)}
           </div>
@@ -216,7 +235,6 @@ export default async function VendorDashboardPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Paid Out
           </div>
-
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(paidOut)}
           </div>
@@ -226,7 +244,6 @@ export default async function VendorDashboardPage() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
             Avg Order Value
           </div>
-
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(averageOrderValue)}
           </div>
@@ -238,7 +255,6 @@ export default async function VendorDashboardPage() {
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
             Delivered
           </div>
-
           <div className="mt-2 text-3xl font-semibold text-emerald-900">
             {deliveredCount}
           </div>
@@ -248,7 +264,6 @@ export default async function VendorDashboardPage() {
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
             Shipped
           </div>
-
           <div className="mt-2 text-3xl font-semibold text-blue-900">
             {shippedCount}
           </div>
@@ -258,7 +273,6 @@ export default async function VendorDashboardPage() {
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
             Processing
           </div>
-
           <div className="mt-2 text-3xl font-semibold text-amber-900">
             {processingCount}
           </div>
@@ -268,7 +282,6 @@ export default async function VendorDashboardPage() {
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
             Top Seller
           </div>
-
           <div className="mt-2 text-lg font-semibold text-black">
             {topSellingBundle}
           </div>
