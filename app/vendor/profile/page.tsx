@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 import { updateVendorProfile } from "./actions";
+import ImageUploadField from "./ImageUploadField";
 
 export const dynamic = "force-dynamic";
 
@@ -124,31 +125,19 @@ export default async function VendorProfilePage() {
             />
           </div>
 
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Logo Image URL
-            </label>
+          <ImageUploadField
+            label="Brand Logo"
+            name="logo"
+            defaultValue={vendor.logo}
+            buttonText="Upload Logo"
+          />
 
-            <input
-              name="logo"
-              defaultValue={vendor.logo ?? ""}
-              placeholder="https://..."
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Banner Image URL
-            </label>
-
-            <input
-              name="bannerImage"
-              defaultValue={vendor.bannerImage ?? ""}
-              placeholder="https://..."
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
-            />
-          </div>
+          <ImageUploadField
+            label="Storefront Banner"
+            name="bannerImage"
+            defaultValue={vendor.bannerImage}
+            buttonText="Upload Banner"
+          />
 
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
