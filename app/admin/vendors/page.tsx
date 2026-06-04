@@ -65,8 +65,8 @@ export default async function AdminVendorsPage() {
             </h1>
 
             <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
-              Review all vendors across the platform including approved,
-              pending, Stripe-connected, and active seller accounts.
+              Review vendors, edit public storefront profiles, monitor Stripe
+              status, and manage marketplace seller accounts.
             </p>
           </div>
 
@@ -94,15 +94,33 @@ export default async function AdminVendorsPage() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-2xl font-semibold tracking-[-0.04em] text-black">
-                      {vendor.name}
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-2xl font-semibold tracking-[-0.04em] text-black">
+                        {vendor.name}
+                      </h2>
+
+                      {vendor.category ? (
+                        <span className="rounded-full border border-black/10 bg-[#f7f5f2] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-600">
+                          {vendor.category}
+                        </span>
+                      ) : null}
+                    </div>
 
                     <p className="mt-2 text-sm text-neutral-600">
                       {vendor.email}
                     </p>
 
-                    <p className="mt-2 text-xs text-neutral-400">
+                    {vendor.bio ? (
+                      <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
+                        {vendor.bio}
+                      </p>
+                    ) : (
+                      <p className="mt-3 text-sm text-neutral-400">
+                        No public bio added yet.
+                      </p>
+                    )}
+
+                    <p className="mt-3 text-xs text-neutral-400">
                       Created: {new Date(vendor.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -157,6 +175,29 @@ export default async function AdminVendorsPage() {
                   {stripeBadge("Onboarding", vendor.stripeOnboardingDone)}
                   {stripeBadge("Charges", vendor.stripeChargesEnabled)}
                   {stripeBadge("Payouts", vendor.stripePayoutsEnabled)}
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href={`/admin/vendors/${vendor.id}/edit`}
+                    className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    Edit Profile
+                  </Link>
+
+                  <Link
+                    href={`/vendors/${vendor.id}`}
+                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+                  >
+                    View Storefront
+                  </Link>
+
+                  <Link
+                    href="/admin/dashboard"
+                    className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+                  >
+                    Dashboard
+                  </Link>
                 </div>
               </div>
             );
