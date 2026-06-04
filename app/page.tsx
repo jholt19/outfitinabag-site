@@ -1,9 +1,28 @@
 import Link from "next/link";
 import Image from "next/image";
+
+import { prisma } from "@/lib/prisma";
 import { OUTFITS } from "../lib/outfits";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
   const trending = OUTFITS.slice(0, 3);
+
+  const vendors = await prisma.vendor.findMany({
+    take: 6,
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      bundles: {
+        where: {
+          published: true,
+        },
+        take: 1,
+      },
+    },
+  });
 
   const occasions = [
     {
@@ -59,31 +78,11 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="/bag"
+              href="/vendors"
               className="rounded-full border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:border-black"
             >
-              View Bag
+              Explore Brands
             </Link>
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <div className="rounded-2xl border border-black/10 bg-white px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black">
-                Complete Looks
-              </div>
-              <div className="mt-1 text-sm text-neutral-500">
-                top • bottom • style
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-black/10 bg-white px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black">
-                One Checkout
-              </div>
-              <div className="mt-1 text-sm text-neutral-500">
-                fast • simple • clean
-              </div>
-            </div>
           </div>
         </div>
 
@@ -98,19 +97,92 @@ export default function HomePage() {
               className="object-cover"
             />
           </div>
-
-          <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-black/10 bg-white/95 p-4 shadow-lg backdrop-blur">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-              Featured Bundle
-            </div>
-            <div className="mt-1 text-lg font-semibold tracking-[-0.03em] text-black">
-              Vacation-ready summer fit
-            </div>
-            <div className="mt-1 text-sm leading-6 text-neutral-600">
-              Real outfit imagery with a premium, one-click shopping experience.
-            </div>
-          </div>
         </div>
+      </section>
+
+      {/* FEATURED VENDORS */}
+      <section className="mt-14">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+              Featured Brands
+            </div>
+
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
+              Shop the marketplace
+            </h2>
+          </div>
+
+          <Link
+            href="/vendors"
+            className="text-sm font-semibold text-black transition hover:opacity-70"
+          >
+            View all vendors →
+          </Link>
+        </div>
+
+        {vendors.length === 0 ? (
+          <div className="rounded-[24px] border border-black/10 bg-white p-6 text-neutral-600">
+            Vendor brands will appear here soon.
+          </div>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {vendors.map((vendor) => {
+              const featuredBundle = vendor.bundles?.[0];
+              const image = vendor.bannerImage || featuredBundle?.image;
+
+              return (
+                <Link
+                  key={vendor.id}
+                  href={`/vendors/${vendor.id}`}
+                  className="group overflow-hidden rounded-[28px] border border-black/10 bg-white transition hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <div className="relative h-[280px] bg-[#f7f5f2]">
+                    {image ? (
+                      <Image
+                        src={image}
+                        alt={vendor.name}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 33vw"
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+                        Vendor image coming soon
+                      </div>
+                    )}
+
+                    {vendor.logo ? (
+                      <div className="absolute bottom-4 left-4 h-16 w-16 overflow-hidden rounded-2xl border border-white/80 bg-white shadow-lg">
+                        <Image
+                          src={vendor.logo}
+                          alt={`${vendor.name} logo`}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="p-5">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                      {vendor.category || "Vendor Storefront"}
+                    </div>
+
+                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-black">
+                      {vendor.name}
+                    </h3>
+
+                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-neutral-600">
+                      {vendor.bio ||
+                        "Explore curated outfit collections from this vendor."}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* SHOP BY OCCASION */}
@@ -201,15 +273,6 @@ export default function HomePage() {
               </div>
 
               <div className="p-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="rounded-full border border-black/10 bg-[#f7f5f2] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-black">
-                    {o.occasion}
-                  </span>
-                  <span className="text-xs font-medium text-neutral-500">
-                    3–5 pieces included
-                  </span>
-                </div>
-
                 <div className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-black">
                   {o.title}
                 </div>
@@ -230,111 +293,6 @@ export default function HomePage() {
               </div>
             </Link>
           ))}
-        </div>
-      </section>
-
-      {/* LOOKBOOK */}
-      <section className="mt-14 grid gap-6 rounded-[32px] border border-black/10 bg-[#f7f5f2] p-5 sm:p-7 lg:grid-cols-[0.9fr_1.1fr] lg:p-8">
-        <div className="self-center">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-            Editorial Feel
-          </div>
-          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
-            The OutfitInABag lookbook
-          </h2>
-          <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
-            Outfits built for discovery, styled for occasions, and designed to
-            help customers buy the full look faster.
-          </p>
-
-          <div className="mt-6">
-            <Link
-              href="/outfits"
-              className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              Shop the Lookbook
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid min-h-[360px] grid-cols-[1.2fr_1fr] grid-rows-2 gap-4">
-          <div className="relative row-span-2 overflow-hidden rounded-[24px] border border-black/10">
-            <Image
-              src="/outfits/for-1.jpg"
-              alt="Lookbook formal"
-              fill
-              sizes="(max-width: 1024px) 100vw, 30vw"
-              className="object-cover"
-            />
-          </div>
-
-          <div className="relative overflow-hidden rounded-[24px] border border-black/10">
-            <Image
-              src="/outfits/vac-1.jpg"
-              alt="Lookbook vacation"
-              fill
-              sizes="(max-width: 1024px) 100vw, 15vw"
-              className="object-cover"
-            />
-          </div>
-
-          <div className="relative overflow-hidden rounded-[24px] border border-black/10">
-            <Image
-              src="/outfits/cas-2.jpg"
-              alt="Lookbook casual"
-              fill
-              sizes="(max-width: 1024px) 100vw, 15vw"
-              className="object-cover"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* FOR BRANDS */}
-      <section className="mt-14 grid gap-6 rounded-[32px] border border-black/10 bg-white p-5 sm:p-7 lg:grid-cols-2 lg:p-8">
-        <div className="self-center">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-            For Brands
-          </div>
-          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
-            Curated from independent brands
-          </h2>
-          <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
-            OutfitInABag helps brands get discovered through complete looks, not
-            just single items. Customers shop the full outfit in one place.
-          </p>
-        </div>
-
-        <div className="grid gap-4 rounded-[24px] border border-black/10 bg-[#f7f5f2] p-5">
-          <div>
-            <div className="text-3xl font-semibold tracking-[-0.05em] text-black">
-              80%
-            </div>
-            <div className="mt-1 text-sm text-neutral-600">vendor payout</div>
-          </div>
-
-          <div>
-            <div className="text-3xl font-semibold tracking-[-0.05em] text-black">
-              1 click
-            </div>
-            <div className="mt-1 text-sm text-neutral-600">to buy the fit</div>
-          </div>
-
-          <div>
-            <div className="text-3xl font-semibold tracking-[-0.05em] text-black">
-              Styled
-            </div>
-            <div className="mt-1 text-sm text-neutral-600">
-              for real occasions
-            </div>
-          </div>
-
-          <Link
-            href="/sell"
-            className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-          >
-            Become a Founding Brand
-          </Link>
         </div>
       </section>
     </main>
