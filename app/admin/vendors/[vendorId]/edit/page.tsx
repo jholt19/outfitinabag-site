@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import ImageUploadField from "@/app/vendor/profile/ImageUploadField";
 
 type Props = {
   params: Promise<{
@@ -94,29 +95,19 @@ export default async function AdminEditVendorPage({ params }: Props) {
             />
           </div>
 
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Logo URL
-            </label>
+          <ImageUploadField
+            label="Brand Logo"
+            name="logo"
+            defaultValue={vendor.logo}
+            buttonText="Upload Logo"
+          />
 
-            <input
-              name="logo"
-              defaultValue={vendor.logo ?? ""}
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Banner URL
-            </label>
-
-            <input
-              name="bannerImage"
-              defaultValue={vendor.bannerImage ?? ""}
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3"
-            />
-          </div>
+          <ImageUploadField
+            label="Storefront Banner"
+            name="bannerImage"
+            defaultValue={vendor.bannerImage}
+            buttonText="Upload Banner"
+          />
 
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
