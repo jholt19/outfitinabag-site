@@ -80,99 +80,99 @@ export default async function VendorProfilePage() {
         </div>
       </section>
 
-      <form
-        action={updateVendorProfile}
-        className="mt-8 rounded-[28px] border border-black/10 bg-white p-6"
-      >
-        <div className="grid gap-5">
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Brand Name
-            </label>
+      <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
+        <form id="vendor-profile-form" action={updateVendorProfile}>
+          <div className="grid gap-5">
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                Brand Name
+              </label>
 
-            <input
-              name="name"
-              defaultValue={vendor.name}
-              required
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
+              <input
+                name="name"
+                defaultValue={vendor.name}
+                required
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                Category
+              </label>
+
+              <input
+                name="category"
+                defaultValue={vendor.category ?? ""}
+                placeholder="Luxury Casualwear, Formalwear, Streetwear"
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                Bio
+              </label>
+
+              <textarea
+                name="bio"
+                defaultValue={vendor.bio ?? ""}
+                rows={5}
+                placeholder="Tell customers about your brand..."
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
+              />
+            </div>
+
+            <ImageUploadField
+              label="Brand Logo"
+              name="logo"
+              defaultValue={vendor.logo}
+              buttonText="Upload Logo"
             />
-          </div>
 
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Category
-            </label>
-
-            <input
-              name="category"
-              defaultValue={vendor.category ?? ""}
-              placeholder="Luxury Casualwear, Formalwear, Streetwear"
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
+            <ImageUploadField
+              label="Storefront Banner"
+              name="bannerImage"
+              defaultValue={vendor.bannerImage}
+              buttonText="Upload Banner"
             />
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                Instagram URL
+              </label>
+
+              <input
+                name="instagram"
+                defaultValue={vendor.instagram ?? ""}
+                placeholder="https://instagram.com/yourbrand"
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                Website URL
+              </label>
+
+              <input
+                name="website"
+                defaultValue={vendor.website ?? ""}
+                placeholder="https://yourbrand.com"
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
+              />
+            </div>
           </div>
+        </form>
 
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Bio
-            </label>
-
-            <textarea
-              name="bio"
-              defaultValue={vendor.bio ?? ""}
-              rows={5}
-              placeholder="Tell customers about your brand..."
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
-            />
-          </div>
-
-          <ImageUploadField
-            label="Brand Logo"
-            name="logo"
-            defaultValue={vendor.logo}
-            buttonText="Upload Logo"
-          />
-
-          <ImageUploadField
-            label="Storefront Banner"
-            name="bannerImage"
-            defaultValue={vendor.bannerImage}
-            buttonText="Upload Banner"
-          />
-
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Instagram URL
-            </label>
-
-            <input
-              name="instagram"
-              defaultValue={vendor.instagram ?? ""}
-              placeholder="https://instagram.com/yourbrand"
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-              Website URL
-            </label>
-
-            <input
-              name="website"
-              defaultValue={vendor.website ?? ""}
-              placeholder="https://yourbrand.com"
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#f7f5f2] px-4 py-3 text-sm text-black"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-          >
-            Save Vendor Profile
-          </button>
-        </div>
-      </form>
+        <button
+          type="submit"
+          form="vendor-profile-form"
+          className="mt-6 rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+        >
+          Save Vendor Profile
+        </button>
+      </section>
     </main>
   );
 }
