@@ -4,7 +4,6 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { toggleSavedOutfit } from "./actions";
 
-
 export const dynamic = "force-dynamic";
 
 function fmtPrice(cents: number | null | undefined) {
@@ -50,6 +49,11 @@ export default async function OutfitPage({
     );
   }
 
+  const isSoldOut = bundle.stock <= 0;
+
+  const isLowStock =
+    bundle.stock > 0 && bundle.stock <= bundle.lowStockThreshold;
+
   const saved = userId
     ? await prisma.savedOutfit.findUnique({
         where: {
@@ -68,23 +72,55 @@ export default async function OutfitPage({
       </Link>
 
       <section className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="overflow-hidden rounded-[32px] border border-black/10 bg-white">
+        <div className="relative overflow-hidden rounded-[32px] border border-black/10 bg-white">
           {bundle.image ? (
             <img
               src={bundle.image}
               alt={bundle.title}
-              className="h-full min-h-[620px] w-full object-cover"
+              className={`h-full min-h-[620px] w-full object-cover ${
+                isSoldOut ? "grayscale" : ""
+              }`}
             />
           ) : (
             <div className="flex min-h-[620px] items-center justify-center bg-[#f7f5f2] text-neutral-400">
               No image available
             </div>
           )}
+
+          {isSoldOut ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+              <span className="rounded-full bg-white px-6 py-3 text-xs font-bold uppercase tracking-[0.18em] text-black">
+                Sold Out
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <div className="rounded-[32px] border border-black/10 bg-white p-6 sm:p-8">
-          <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
-            {bundle.occasion}
+          <div className="flex flex-wrap gap-2">
+            <div className="inline-flex rounded-full bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+              {bundle.occasion}
+            </div>
+
+            {bundle.isFeatured ? (
+              <div className="inline-flex rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-700">
+                Featured
+              </div>
+            ) : null}
+
+            {isSoldOut ? (
+              <div className="inline-flex rounded-full border border-red-200 bg-red-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-700">
+                Sold Out
+              </div>
+            ) : isLowStock ? (
+              <div className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                Only {bundle.stock} Left
+              </div>
+            ) : (
+              <div className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                In Stock
+              </div>
+            )}
           </div>
 
           <h1 className="mt-5 text-[clamp(2.7rem,7vw,5.2rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-black">
@@ -96,13 +132,28 @@ export default async function OutfitPage({
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
-              Vendor: {bundle.vendor?.name ?? "OutfitInABag"}
-            </div>
+            {bundle.vendor ? (
+              <Link
+                href={`/vendors/${bundle.vendor.id}`}
+                className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black transition hover:border-black"
+              >
+                Vendor: {bundle.vendor.name}
+              </Link>
+            ) : (
+              <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
+                Vendor: OutfitInABag
+              </div>
+            )}
 
             {bundle.tier ? (
               <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
                 {bundle.tier}
+              </div>
+            ) : null}
+
+            {!isSoldOut ? (
+              <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
+                {bundle.stock} available
               </div>
             ) : null}
           </div>
@@ -112,7 +163,15 @@ export default async function OutfitPage({
           </div>
 
           <div className="mt-10 grid gap-3">
-            {userId ? (
+            {isSoldOut ? (
+              <button
+                type="button"
+                disabled
+                className="w-full cursor-not-allowed rounded-full bg-neutral-300 px-6 py-4 text-sm font-semibold text-neutral-600"
+              >
+                Sold Out
+              </button>
+            ) : userId ? (
               <form action="/api/cart/add" method="POST">
                 <input type="hidden" name="bundleId" value={bundle.id} />
 
