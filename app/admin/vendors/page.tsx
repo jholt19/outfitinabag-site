@@ -65,8 +65,8 @@ export default async function AdminVendorsPage() {
             </h1>
 
             <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
-              Review vendors, edit public storefront profiles, monitor Stripe
-              status, and manage marketplace seller accounts.
+              Approve vendors, reject vendors, edit public storefront profiles,
+              and manage marketplace seller accounts.
             </p>
           </div>
 
@@ -175,6 +175,44 @@ export default async function AdminVendorsPage() {
                   {stripeBadge("Onboarding", vendor.stripeOnboardingDone)}
                   {stripeBadge("Charges", vendor.stripeChargesEnabled)}
                   {stripeBadge("Payouts", vendor.stripePayoutsEnabled)}
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    Approval Controls
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <form action={`/api/admin/vendors/${vendor.id}/status`} method="POST">
+                      <input type="hidden" name="status" value="approved" />
+                      <button
+                        type="submit"
+                        className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                      >
+                        Approve
+                      </button>
+                    </form>
+
+                    <form action={`/api/admin/vendors/${vendor.id}/status`} method="POST">
+                      <input type="hidden" name="status" value="pending" />
+                      <button
+                        type="submit"
+                        className="rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                      >
+                        Set Pending
+                      </button>
+                    </form>
+
+                    <form action={`/api/admin/vendors/${vendor.id}/status`} method="POST">
+                      <input type="hidden" name="status" value="rejected" />
+                      <button
+                        type="submit"
+                        className="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                      >
+                        Reject
+                      </button>
+                    </form>
+                  </div>
                 </div>
 
                 <div className="mt-6 flex flex-wrap gap-3">
