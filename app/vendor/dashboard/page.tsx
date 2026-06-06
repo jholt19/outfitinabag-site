@@ -36,7 +36,6 @@ export default async function VendorDashboardPage() {
           <h1 className="text-4xl font-semibold tracking-[-0.04em]">
             Sign in required
           </h1>
-
           <p className="mt-3 text-neutral-600">
             Please sign in to view your vendor dashboard.
           </p>
@@ -56,12 +55,10 @@ export default async function VendorDashboardPage() {
           <h1 className="text-4xl font-semibold tracking-[-0.04em]">
             Vendor account not connected
           </h1>
-
           <p className="mt-3 text-neutral-600">
             Claim your vendor account before viewing orders, payouts, and
             dashboard analytics.
           </p>
-
           <Link
             href="/vendor/claim"
             className="mt-6 inline-flex rounded-full bg-black px-6 py-3 text-sm font-semibold text-white"
@@ -101,11 +98,8 @@ export default async function VendorDashboardPage() {
     const amount = item.vendorPayoutCents ?? 0;
     totalRevenue += amount;
 
-    if (item.payoutStatus === "PAID") {
-      paidOut += amount;
-    } else {
-      pendingPayouts += amount;
-    }
+    if (item.payoutStatus === "PAID") paidOut += amount;
+    else pendingPayouts += amount;
 
     if (item.fulfillmentStatus === "SHIPPED") shippedCount++;
     if (item.fulfillmentStatus === "DELIVERED") deliveredCount++;
@@ -189,11 +183,6 @@ export default async function VendorDashboardPage() {
             <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
               Payout Readiness
             </h2>
-
-            <p className="mt-2 text-sm leading-6 text-neutral-600">
-              This shows whether this vendor can accept charges and receive
-              payouts through Stripe Connect.
-            </p>
           </div>
 
           <Link
@@ -287,6 +276,153 @@ export default async function VendorDashboardPage() {
           </div>
         </div>
       </section>
+
+      <section className="mt-8 rounded-[28px] border border-black/10 bg-white p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+              Bundles & Inventory
+            </div>
+
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
+              My Bundles
+            </h2>
+          </div>
+
+          <div className="rounded-full border border-black/10 bg-[#f7f5f2] px-4 py-2 text-sm font-semibold text-black">
+            {bundles.length} Total
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-5">
+          {bundles.length === 0 ? (
+            <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5 text-neutral-600">
+              No bundles yet.
+            </div>
+          ) : (
+            bundles.map((bundle) => {
+              const isSoldOut = bundle.stock <= 0;
+              const isLowStock =
+                bundle.stock > 0 && bundle.stock <= bundle.lowStockThreshold;
+
+              const status = bundle.published
+                ? "Published"
+                : bundle.submittedForReview
+                  ? "Awaiting Review"
+                  : "Draft";
+
+              return (
+                <div
+                  key={bundle.id}
+                  className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-5"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                        {bundle.occasion}
+                      </div>
+
+                      <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-black">
+                        {bundle.title}
+                      </h3>
+
+                      <p className="mt-2 text-sm text-neutral-600">
+                        Price: <strong>{fmtCents(bundle.price)}</strong>
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-600">
+                        Status: <strong>{status}</strong>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {isSoldOut ? (
+                        <span className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-red-700">
+                          Sold Out
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                          Low Stock
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                          In Stock
+                        </span>
+                      )}
+
+                      {!bundle.published && !bundle.submittedForReview ? (
+                        <form action={submitBundleForReview}>
+                          <input
+                            type="hidden"
+                            name="bundleId"
+                            value={bundle.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="vendorId"
+                            value={vendorId}
+                          />
+
+                          <button
+                            type="submit"
+                            className="rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                          >
+                            Submit for Review
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <form
+                    action={updateBundleInventory}
+                    className="mt-5 grid gap-4 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[1fr_1fr_auto]"
+                  >
+                    <input type="hidden" name="bundleId" value={bundle.id} />
+
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                        Stock Quantity
+                      </label>
+
+                      <input
+                        type="number"
+                        name="stock"
+                        min="0"
+                        defaultValue={bundle.stock}
+                        className="mt-1 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                        Low Stock Alert
+                      </label>
+
+                      <input
+                        type="number"
+                        name="lowStockThreshold"
+                        min="0"
+                        defaultValue={bundle.lowStockThreshold}
+                        className="mt-1 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black"
+                      />
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        type="submit"
+                        className="w-full rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                      >
+                        Update Inventory
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
     </main>
   );
-}      
+}
