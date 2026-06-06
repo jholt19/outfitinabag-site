@@ -35,7 +35,7 @@ export default async function VendorStorefrontPage({
     },
   });
 
-  if (!vendor) {
+  if (!vendor || vendor.status !== "approved") {
     notFound();
   }
 
@@ -134,7 +134,7 @@ export default async function VendorStorefrontPage({
           </div>
 
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
-            Active
+            Approved
           </div>
         </div>
 
@@ -164,65 +164,109 @@ export default async function VendorStorefrontPage({
           </div>
         ) : (
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {vendor.bundles.map((bundle) => (
-              <article
-                key={bundle.id}
-                className="overflow-hidden rounded-[28px] border border-black/10 bg-white"
-              >
-                <Link href={`/outfits/${bundle.id}`}>
-                  <div className="relative h-[360px] bg-[#f7f5f2]">
-                    {bundle.image ? (
-                      <Image
-                        src={bundle.image}
-                        alt={bundle.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-neutral-400">
-                        No image
+            {vendor.bundles.map((bundle) => {
+              const isSoldOut = bundle.stock <= 0;
+              const isLowStock =
+                bundle.stock > 0 && bundle.stock <= bundle.lowStockThreshold;
+
+              return (
+                <article
+                  key={bundle.id}
+                  className={`overflow-hidden rounded-[28px] border border-black/10 bg-white ${
+                    isSoldOut ? "opacity-75" : ""
+                  }`}
+                >
+                  <Link href={`/outfits/${bundle.id}`}>
+                    <div className="relative h-[360px] bg-[#f7f5f2]">
+                      {bundle.image ? (
+                        <Image
+                          src={bundle.image}
+                          alt={bundle.title}
+                          fill
+                          className={`object-cover ${
+                            isSoldOut ? "grayscale" : ""
+                          }`}
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+                          No image
+                        </div>
+                      )}
+
+                      {isSoldOut ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                          <span className="rounded-full bg-white px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-black">
+                            Sold Out
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </Link>
+
+                  <div className="p-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                        {bundle.occasion}
                       </div>
-                    )}
+
+                      {isLowStock ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+                          Only {bundle.stock} Left
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-black">
+                      {bundle.title}
+                    </h3>
+
+                    {bundle.description ? (
+                      <p className="mt-3 line-clamp-2 text-sm leading-6 text-neutral-600">
+                        {bundle.description}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-4 text-xl font-semibold text-black">
+                      {fmtCents(bundle.price)}
+                    </div>
+
+                    <div className="mt-5 grid gap-3">
+                      <Link
+                        href={`/outfits/${bundle.id}`}
+                        className="rounded-full bg-black px-5 py-3 text-center text-sm font-semibold text-white transition hover:opacity-90"
+                      >
+                        View Outfit
+                      </Link>
+
+                      {isSoldOut ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="cursor-not-allowed rounded-full border border-black/10 bg-neutral-200 px-5 py-3 text-center text-sm font-semibold text-neutral-500"
+                        >
+                          Sold Out
+                        </button>
+                      ) : (
+                        <form action="/api/cart/add" method="POST">
+                          <input
+                            type="hidden"
+                            name="bundleId"
+                            value={bundle.id}
+                          />
+
+                          <button
+                            type="submit"
+                            className="w-full rounded-full border border-black/15 bg-white px-5 py-3 text-center text-sm font-semibold text-black transition hover:border-black"
+                          >
+                            Add to Bag
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </div>
-                </Link>
-
-                <div className="p-5">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
-                    {bundle.occasion}
-                  </div>
-
-                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-black">
-                    {bundle.title}
-                  </h3>
-
-                  {bundle.description ? (
-                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-neutral-600">
-                      {bundle.description}
-                    </p>
-                  ) : null}
-
-                  <div className="mt-4 text-xl font-semibold text-black">
-                    {fmtCents(bundle.price)}
-                  </div>
-
-                  <div className="mt-5 grid gap-3">
-                    <Link
-                      href={`/outfits/${bundle.id}`}
-                      className="rounded-full bg-black px-5 py-3 text-center text-sm font-semibold text-white transition hover:opacity-90"
-                    >
-                      View Outfit
-                    </Link>
-
-                    <Link
-                      href={`/bag?addBundleId=${bundle.id}`}
-                      className="rounded-full border border-black/15 bg-white px-5 py-3 text-center text-sm font-semibold text-black transition hover:border-black"
-                    >
-                      Add to Bag
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

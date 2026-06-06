@@ -7,6 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function VendorsPage() {
   const vendors = await prisma.vendor.findMany({
+    where: {
+      status: "approved",
+    },
+
     include: {
       bundles: {
         where: {
@@ -38,8 +42,8 @@ export default async function VendorsPage() {
           </h1>
 
           <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-600 sm:text-lg">
-            Discover premium vendors creating complete outfit experiences for
-            every occasion.
+            Discover approved premium vendors creating complete outfit
+            experiences for every occasion.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -62,7 +66,7 @@ export default async function VendorsPage() {
 
       <section className="mt-14">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-          Current Partners
+          Approved Partners
         </div>
 
         <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
@@ -71,7 +75,7 @@ export default async function VendorsPage() {
 
         {vendors.length === 0 ? (
           <div className="mt-6 rounded-[28px] border border-black/10 bg-white p-8 text-neutral-600">
-            No vendors available yet.
+            No approved vendors available yet.
           </div>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
