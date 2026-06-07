@@ -9,20 +9,26 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const trending = OUTFITS.slice(0, 3);
 
-  const vendors = await prisma.vendor.findMany({
-    take: 6,
-    orderBy: {
-      createdAt: "desc",
-    },
-    include: {
-      bundles: {
-        where: {
-          published: true,
-        },
-        take: 1,
+ const vendors = await prisma.vendor.findMany({
+  where: {
+    status: "approved",
+  },
+
+  take: 6,
+
+  orderBy: {
+    createdAt: "desc",
+  },
+
+  include: {
+    bundles: {
+      where: {
+        published: true,
       },
+      take: 1,
     },
-  });
+  },
+});
 
   const occasions = [
     {
