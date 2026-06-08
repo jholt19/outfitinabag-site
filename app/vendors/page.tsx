@@ -5,6 +5,19 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+function reviewSummary(reviews: { rating: number }[]) {
+  if (reviews.length === 0) {
+    return "No reviews yet";
+  }
+
+  const average =
+    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+
+  return `${average.toFixed(1)} ★ · ${reviews.length} Review${
+    reviews.length === 1 ? "" : "s"
+  }`;
+}
+
 export default async function VendorsPage() {
   const vendors = await prisma.vendor.findMany({
     where: {
@@ -12,6 +25,7 @@ export default async function VendorsPage() {
     },
 
     include: {
+      reviews: true,
       bundles: {
         where: {
           published: true,
@@ -102,6 +116,10 @@ export default async function VendorsPage() {
                         No vendor image
                       </div>
                     )}
+
+                    <div className="absolute left-4 top-4 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-black shadow-sm backdrop-blur">
+                      {reviewSummary(vendor.reviews)}
+                    </div>
 
                     {vendor.logo ? (
                       <div className="absolute bottom-4 left-4 h-16 w-16 overflow-hidden rounded-2xl border border-white/70 bg-white shadow-lg">
