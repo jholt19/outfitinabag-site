@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { OUTFITS } from "../lib/outfits";
 
 export const dynamic = "force-dynamic";
+
 function reviewSummary(reviews: { rating: number }[]) {
   if (reviews.length === 0) {
     return "No reviews yet";
@@ -21,48 +22,24 @@ function reviewSummary(reviews: { rating: number }[]) {
 export default async function HomePage() {
   const trending = OUTFITS.slice(0, 3);
 
- const vendors = await prisma.vendor.findMany({
-  where: {
-    status: "approved",
-  },
-
-  take: 6,
-
-  orderBy: {
-    createdAt: "desc",
-  },
-
-  include: {
-    reviews: true,
-
-    bundles: {
-      where: {
-        published: true,
-      },
-      take: 1,
+  const vendors = await prisma.vendor.findMany({
+    where: {
+      status: "approved",
     },
-  },
-});
-
-  where: {
-    status: "approved",
-  },
-
-  take: 6,
-
-  orderBy: {
-    createdAt: "desc",
-  },
-
-  include: {
-    bundles: {
-      where: {
-        published: true,
-      },
-      take: 1,
+    take: 6,
+    orderBy: {
+      createdAt: "desc",
     },
-  },
-});
+    include: {
+      reviews: true,
+      bundles: {
+        where: {
+          published: true,
+        },
+        take: 1,
+      },
+    },
+  });
 
   const occasions = [
     {
@@ -93,7 +70,6 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6 lg:px-8">
-      {/* HERO */}
       <section className="grid items-center gap-8 rounded-[32px] border border-black/10 bg-[#f7f5f2] p-5 sm:p-7 lg:grid-cols-2 lg:p-10">
         <div className="max-w-2xl">
           <div className="inline-flex rounded-full bg-black px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white sm:text-[11px]">
@@ -140,7 +116,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* FEATURED VENDORS */}
       <section className="mt-14">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -191,9 +166,11 @@ export default async function HomePage() {
                         Vendor image coming soon
                       </div>
                     )}
-<div className="absolute left-4 top-4 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-black shadow-sm backdrop-blur">
-  {reviewSummary(vendor.reviews)}
-</div>
+
+                    <div className="absolute left-4 top-4 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-black shadow-sm backdrop-blur">
+                      {reviewSummary(vendor.reviews)}
+                    </div>
+
                     {vendor.logo ? (
                       <div className="absolute bottom-4 left-4 h-16 w-16 overflow-hidden rounded-2xl border border-white/80 bg-white shadow-lg">
                         <Image
@@ -227,7 +204,6 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* SHOP BY OCCASION */}
       <section className="mt-14">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -277,7 +253,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* TRENDING FITS */}
       <section className="mt-14">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
