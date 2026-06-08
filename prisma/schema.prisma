@@ -138,6 +138,23 @@ model Vendor {
   bundles    Bundle[]
   outfits    VendorOutfit[]
   orderItems OrderItem[]
+  reviews    VendorReview[]
+}
+
+model VendorReview {
+  id        String   @id @default(cuid())
+  vendorId  String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, userId])
+  @@index([vendorId])
+  @@index([userId])
 }
 
 model VendorOutfit {
