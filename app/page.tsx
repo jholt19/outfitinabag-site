@@ -6,13 +6,20 @@ import { OUTFITS } from "../lib/outfits";
 
 export const dynamic = "force-dynamic";
 
+function averageRating(reviews: { rating: number }[]) {
+  if (reviews.length === 0) return 0;
+
+  return (
+    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+  );
+}
+
 function reviewSummary(reviews: { rating: number }[]) {
   if (reviews.length === 0) {
     return "No reviews yet";
   }
 
-  const average =
-    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+  const average = averageRating(reviews);
 
   return `${average.toFixed(1)} ★ · ${reviews.length} Review${
     reviews.length === 1 ? "" : "s"
@@ -40,6 +47,17 @@ export default async function HomePage() {
       },
     },
   });
+
+  const topRatedVendors = [...vendors]
+    .filter((vendor) => vendor.reviews.length > 0)
+    .sort((a, b) => {
+      const ratingDiff = averageRating(b.reviews) - averageRating(a.reviews);
+
+      if (ratingDiff !== 0) return ratingDiff;
+
+      return b.reviews.length - a.reviews.length;
+    })
+    .slice(0, 3);
 
   const occasions = [
     {
@@ -115,6 +133,58 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {topRatedVendors.length > 0 ? (
+        <section className="mt-14 rounded-[32px] border border-black/10 bg-black p-6 text-white sm:p-8">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                Top Rated Vendors
+              </div>
+
+              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+                Customer favorites
+              </h2>
+            </div>
+
+            <Link
+              href="/vendors"
+              className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:opacity-90"
+            >
+              View all vendors
+            </Link>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {topRatedVendors.map((vendor, index) => (
+              <Link
+                key={vendor.id}
+                href={`/vendors/${vendor.id}`}
+                className="rounded-[24px] border border-white/10 bg-white/10 p-5 transition hover:-translate-y-1 hover:bg-white/15"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-black">
+                    #{index + 1} Top Rated
+                  </div>
+
+                  <div className="text-sm font-semibold">
+                    {reviewSummary(vendor.reviews)}
+                  </div>
+                </div>
+
+                <h3 className="mt-5 text-2xl font-semibold tracking-[-0.04em]">
+                  {vendor.name}
+                </h3>
+
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/70">
+                  {vendor.bio ||
+                    "Explore curated outfit collections from this vendor."}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-14">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
