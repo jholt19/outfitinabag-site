@@ -42,14 +42,21 @@ export default async function AdminVendorsPage() {
   await requireAdmin();
 
   const vendors = await prisma.vendor.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: [
+      {
+        isFeatured: "desc",
+      },
+      {
+        createdAt: "desc",
+      },
+    ],
     include: {
       bundles: true,
       orderItems: true,
     },
   });
+
+  const featuredCount = vendors.filter((vendor) => vendor.isFeatured).length;
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-6 lg:px-8">
@@ -65,13 +72,19 @@ export default async function AdminVendorsPage() {
             </h1>
 
             <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
-              Approve vendors, reject vendors, edit public storefront profiles,
-              and manage marketplace seller accounts.
+              Approve vendors, feature vendors, edit storefront profiles, and
+              manage marketplace seller accounts.
             </p>
           </div>
 
-          <div className="rounded-full border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black">
-            {vendors.length} Vendors
+          <div className="flex flex-wrap gap-3">
+            <div className="rounded-full border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black">
+              {vendors.length} Vendors
+            </div>
+
+            <div className="rounded-full border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-700">
+              {featuredCount} Featured
+            </div>
           </div>
         </div>
       </section>
@@ -98,6 +111,12 @@ export default async function AdminVendorsPage() {
                       <h2 className="text-2xl font-semibold tracking-[-0.04em] text-black">
                         {vendor.name}
                       </h2>
+
+                      {vendor.isFeatured ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+                          Featured ⭐
+                        </span>
+                      ) : null}
 
                       {vendor.category ? (
                         <span className="rounded-full border border-black/10 bg-[#f7f5f2] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-600">
@@ -177,39 +196,79 @@ export default async function AdminVendorsPage() {
                   {stripeBadge("Payouts", vendor.stripePayoutsEnabled)}
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                    Approval Controls
+                <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                      Approval Controls
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <form
+                        action={`/api/admin/vendors/${vendor.id}/status`}
+                        method="POST"
+                      >
+                        <input type="hidden" name="status" value="approved" />
+                        <button
+                          type="submit"
+                          className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                        >
+                          Approve
+                        </button>
+                      </form>
+
+                      <form
+                        action={`/api/admin/vendors/${vendor.id}/status`}
+                        method="POST"
+                      >
+                        <input type="hidden" name="status" value="pending" />
+                        <button
+                          type="submit"
+                          className="rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                        >
+                          Set Pending
+                        </button>
+                      </form>
+
+                      <form
+                        action={`/api/admin/vendors/${vendor.id}/status`}
+                        method="POST"
+                      >
+                        <input type="hidden" name="status" value="rejected" />
+                        <button
+                          type="submit"
+                          className="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                        >
+                          Reject
+                        </button>
+                      </form>
+                    </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <form action={`/api/admin/vendors/${vendor.id}/status`} method="POST">
-                      <input type="hidden" name="status" value="approved" />
-                      <button
-                        type="submit"
-                        className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                      >
-                        Approve
-                      </button>
-                    </form>
+                  <div className="rounded-2xl border border-black/10 bg-[#f7f5f2] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                      Featured Controls
+                    </div>
 
-                    <form action={`/api/admin/vendors/${vendor.id}/status`} method="POST">
-                      <input type="hidden" name="status" value="pending" />
-                      <button
-                        type="submit"
-                        className="rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                      >
-                        Set Pending
-                      </button>
-                    </form>
+                    <form
+                      action={`/api/admin/vendors/${vendor.id}/featured`}
+                      method="POST"
+                      className="mt-4"
+                    >
+                      <input
+                        type="hidden"
+                        name="isFeatured"
+                        value={vendor.isFeatured ? "false" : "true"}
+                      />
 
-                    <form action={`/api/admin/vendors/${vendor.id}/status`} method="POST">
-                      <input type="hidden" name="status" value="rejected" />
                       <button
                         type="submit"
-                        className="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                        className={`rounded-full px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 ${
+                          vendor.isFeatured ? "bg-neutral-700" : "bg-black"
+                        }`}
                       >
-                        Reject
+                        {vendor.isFeatured
+                          ? "Remove Featured"
+                          : "Make Featured"}
                       </button>
                     </form>
                   </div>

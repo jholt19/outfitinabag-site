@@ -116,6 +116,7 @@ model Vendor {
   name      String
   email     String  @unique
   status    String  @default("pending")
+  isFeatured Boolean @default(false)
   apiKey    String? @unique
 
   logo        String?
