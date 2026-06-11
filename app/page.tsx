@@ -29,23 +29,24 @@ function reviewSummary(reviews: { rating: number }[]) {
 export default async function HomePage() {
   const trending = OUTFITS.slice(0, 3);
 
-  const vendors = await prisma.vendor.findMany({
-    const featuredVendors = await prisma.vendor.findMany({
-  where: {
-    status: "approved",
-    isFeatured: true,
-  },
-  take: 3,
-  include: {
-    reviews: true,
-    bundles: {
-      where: {
-        published: true,
-      },
-      take: 1,
+  const featuredVendors = await prisma.vendor.findMany({
+    where: {
+      status: "approved",
+      isFeatured: true,
     },
-  },
-});
+    take: 3,
+    include: {
+      reviews: true,
+      bundles: {
+        where: {
+          published: true,
+        },
+        take: 1,
+      },
+    },
+  });
+
+  const vendors = await prisma.vendor.findMany({
     where: {
       status: "approved",
     },
@@ -149,56 +150,83 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-{featuredVendors.length > 0 ? (
-  <section className="mt-14">
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-          Featured Partners
-        </div>
 
-        <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
-          Hand selected brands
-        </h2>
-      </div>
+      {featuredVendors.length > 0 ? (
+        <section className="mt-14">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                Featured Partners
+              </div>
 
-      <Link
-        href="/vendors"
-        className="text-sm font-semibold text-black transition hover:opacity-70"
-      >
-        View all vendors →
-      </Link>
-    </div>
-
-    <div className="grid gap-5 md:grid-cols-3">
-      {featuredVendors.map((vendor) => (
-        <Link
-          key={vendor.id}
-          href={`/vendors/${vendor.id}`}
-          className="group overflow-hidden rounded-[28px] border border-black/10 bg-white transition hover:-translate-y-1 hover:shadow-xl"
-        >
-          <div className="p-6">
-            <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">
-              Featured ⭐
+              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black sm:text-4xl">
+                Hand selected brands
+              </h2>
             </div>
 
-            <h3 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-black">
-              {vendor.name}
-            </h3>
-
-            <p className="mt-3 text-sm leading-6 text-neutral-600">
-              {vendor.bio || "Premium featured marketplace partner."}
-            </p>
-
-            <div className="mt-4 text-sm font-semibold text-black">
-              {reviewSummary(vendor.reviews)}
-            </div>
+            <Link
+              href="/vendors"
+              className="text-sm font-semibold text-black transition hover:opacity-70"
+            >
+              View all vendors →
+            </Link>
           </div>
-        </Link>
-      ))}
-    </div>
-  </section>
-) : null}
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {featuredVendors.map((vendor) => {
+              const featuredBundle = vendor.bundles?.[0];
+              const image = vendor.bannerImage || featuredBundle?.image;
+
+              return (
+                <Link
+                  key={vendor.id}
+                  href={`/vendors/${vendor.id}`}
+                  className="group overflow-hidden rounded-[28px] border border-black/10 bg-white transition hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <div className="relative h-[260px] bg-[#f7f5f2]">
+                    {image ? (
+                      <Image
+                        src={image}
+                        alt={vendor.name}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 33vw"
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-neutral-400">
+                        Vendor image coming soon
+                      </div>
+                    )}
+
+                    <div className="absolute left-4 top-4 rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700 shadow-sm">
+                      Featured ⭐
+                    </div>
+
+                    <div className="absolute bottom-4 left-4 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-black shadow-sm backdrop-blur">
+                      {reviewSummary(vendor.reviews)}
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                      {vendor.category || "Featured Vendor"}
+                    </div>
+
+                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-black">
+                      {vendor.name}
+                    </h3>
+
+                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-neutral-600">
+                      {vendor.bio || "Premium featured marketplace partner."}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
       {topRatedVendors.length > 0 ? (
         <section className="mt-14 rounded-[32px] border border-black/10 bg-black p-6 text-white sm:p-8">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">

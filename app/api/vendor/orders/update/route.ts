@@ -4,8 +4,6 @@ import { Resend } from "resend";
 
 import { prisma } from "@/lib/prisma";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const VALID_STATUSES = [
   "PENDING",
   "PROCESSING",
@@ -13,6 +11,16 @@ const VALID_STATUSES = [
   "DELIVERED",
   "CANCELLED",
 ];
+
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    return null;
+  }
+
+  return new Resend(apiKey);
+}
 
 function trackingLink(carrier?: string | null, tracking?: string | null) {
   if (!carrier || !tracking) return null;
@@ -32,6 +40,15 @@ function trackingLink(carrier?: string | null, tracking?: string | null) {
   }
 
   return null;
+}
+
+function reviewLink(vendorId?: string | null) {
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.outfitinabag.com";
+
+  if (!vendorId) return siteUrl;
+
+  return `${siteUrl}/vendors/${vendorId}`;
 }
 
 export async function POST(req: Request) {
@@ -90,6 +107,7 @@ export async function POST(req: Request) {
       },
       include: {
         order: true,
+        vendor: true,
       },
     });
 
@@ -117,6 +135,7 @@ export async function POST(req: Request) {
       },
       include: {
         order: true,
+        vendor: true,
       },
     });
 
@@ -139,19 +158,42 @@ export async function POST(req: Request) {
       hasResendKey: Boolean(process.env.RESEND_API_KEY),
     });
 
-    if (shouldEmailCustomer && process.env.RESEND_API_KEY) {
+    const resend = getResendClient();
+
+    if (shouldEmailCustomer && resend) {
       const trackUrl = trackingLink(
         updatedItem.trackingCarrier,
         updatedItem.trackingNumber
       );
 
+      const vendorReviewUrl = reviewLink(updatedItem.vendor?.id);
+
       console.log("[SHIPMENT_EMAIL] sending email", {
         to: updatedItem.order.email,
         trackUrl,
+        vendorReviewUrl,
       });
 
+      const deliveredReviewBlock =
+        fulfillmentStatus === "DELIVERED"
+          ? `
+            <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
+            <h2 style="margin:0 0 8px;">How was your experience?</h2>
+            <p>Help other shoppers by leaving a quick review for ${
+              updatedItem.vendor?.name || "this vendor"
+            }.</p>
+            <p>
+              <a href="${vendorReviewUrl}" style="display:inline-block;background:#000;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:bold;">
+                Leave a Review
+              </a>
+            </p>
+          `
+          : "";
+
       const result = await resend.emails.send({
-        from: "OutfitInABag <onboarding@resend.dev>",
+        from:
+          process.env.EMAIL_FROM ||
+          "OutfitInABag <onboarding@resend.dev>",
         to: updatedItem.order.email!,
         subject:
           fulfillmentStatus === "DELIVERED"
@@ -159,7 +201,7 @@ export async function POST(req: Request) {
             : "Your OutfitInABag order has shipped",
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
-            <h2>Order Update</h2>
+            <h1 style="margin:0 0 16px;">Order Update</h1>
             <p>Your item has been updated:</p>
             <p><strong>${updatedItem.title}</strong></p>
             <p>Status: <strong>${fulfillmentStatus}</strong></p>
@@ -178,6 +220,7 @@ export async function POST(req: Request) {
                 ? `<p><a href="${trackUrl}" style="display:inline-block;background:#000;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:bold;">Track Package</a></p>`
                 : ""
             }
+            ${deliveredReviewBlock}
             <p>Thank you for shopping with OutfitInABag.</p>
           </div>
         `,
