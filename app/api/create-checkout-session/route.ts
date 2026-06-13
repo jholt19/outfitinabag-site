@@ -55,60 +55,24 @@ export async function GET(req: Request) {
     });
 
     const url = new URL(req.url);
+    const baseUrl = getBaseUrl();
 
     const bundleId = url.searchParams.get("bundleId");
     const cartCheckout = url.searchParams.get("cart") === "true";
 
     const promoCodeInput = String(
-  url.searchParams.get("promo") ||
-    url.searchParams.get("promoCode") ||
-    url.searchParams.get("discount") ||
-    ""
-)
-  .trim()
-  .toUpperCase();
-  
-    const baseUrl = getBaseUrl();
+      url.searchParams.get("promo") ||
+        url.searchParams.get("promoCode") ||
+        url.searchParams.get("discount") ||
+        ""
+    )
+      .trim()
+      .toUpperCase();
 
     const { userId } = await auth();
     const user = await currentUser();
 
-    const userEmail =
-      user?.emailAddresses?.[0]?.emailAddress || undefined;
-
-    let promo = null;
-
-    if (promoCodeInput) {
-      promo = await prisma.promoCode.findFirst({
-        where: {
-          code: promoCodeInput,
-          isActive: true,
-        },
-      });
-
-      if (!promo) {
-        return Response.redirect(`${baseUrl}/bag?promoError=invalid`, 303);
-      }
-
-      if (!promo.percentOff && !promo.amountOffCents) {
-        return Response.redirect(
-          `${baseUrl}/bag?promoError=missingDiscount`,
-          303
-        );
-      }
-
-      if (promo.maxUses && promo.usedCount >= promo.maxUses) {
-        return Response.redirect(`${baseUrl}/bag?promoError=maxUses`, 303);
-      }
-
-      if (promo.startsAt && new Date() < promo.startsAt) {
-        return Response.redirect(`${baseUrl}/bag?promoError=notStarted`, 303);
-      }
-
-      if (promo.expiresAt && new Date() > promo.expiresAt) {
-        return Response.redirect(`${baseUrl}/bag?promoError=expired`, 303);
-      }
-    }
+    const userEmail = user?.emailAddresses?.[0]?.emailAddress || undefined;
 
     if (cartCheckout) {
       if (!userId) {
@@ -173,6 +137,58 @@ export async function GET(req: Request) {
         }
       }
 
+      const subtotal = items.reduce((sum, item) => {
+        return sum + item.bundle.price * item.quantity;
+      }, 0);
+
+      const vendorIds = Array.from(
+        new Set(items.map((item) => item.bundle.vendorId))
+      );
+
+      const singleVendor =
+        vendorIds.length === 1 ? items[0]?.bundle.vendor : null;
+
+      let promo = null;
+
+      if (promoCodeInput) {
+        promo = await prisma.promoCode.findFirst({
+          where: {
+            code: promoCodeInput,
+            isActive: true,
+          },
+        });
+
+        if (!promo) {
+          return Response.redirect(`${baseUrl}/bag?promoError=invalid`, 303);
+        }
+
+        if (!promo.percentOff && !promo.amountOffCents) {
+          return Response.redirect(
+            `${baseUrl}/bag?promoError=missingDiscount`,
+            303
+          );
+        }
+
+        if (promo.maxUses && promo.usedCount >= promo.maxUses) {
+          return Response.redirect(`${baseUrl}/bag?promoError=maxUses`, 303);
+        }
+
+        if (promo.startsAt && new Date() < promo.startsAt) {
+          return Response.redirect(`${baseUrl}/bag?promoError=notStarted`, 303);
+        }
+
+        if (promo.expiresAt && new Date() > promo.expiresAt) {
+          return Response.redirect(`${baseUrl}/bag?promoError=expired`, 303);
+        }
+
+        if (promo.vendorId && !vendorIds.includes(promo.vendorId)) {
+          return Response.redirect(
+            `${baseUrl}/bag?promoError=wrongVendor`,
+            303
+          );
+        }
+      }
+
       const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] =
         items.map((item) => ({
           quantity: item.quantity,
@@ -194,17 +210,6 @@ export async function GET(req: Request) {
           },
         }));
 
-      const subtotal = items.reduce((sum, item) => {
-        return sum + item.bundle.price * item.quantity;
-      }, 0);
-
-      const vendorIds = Array.from(
-        new Set(items.map((item) => item.bundle.vendorId))
-      );
-
-      const singleVendor =
-        vendorIds.length === 1 ? items[0]?.bundle.vendor : null;
-
       let estimatedDiscountAmount = 0;
 
       if (promo) {
@@ -216,17 +221,10 @@ export async function GET(req: Request) {
           estimatedDiscountAmount = promo.amountOffCents;
         }
 
-        estimatedDiscountAmount = Math.min(
-          estimatedDiscountAmount,
-          subtotal
-        );
+        estimatedDiscountAmount = Math.min(estimatedDiscountAmount, subtotal);
       }
 
-      const discountedSubtotal = Math.max(
-        0,
-        subtotal - estimatedDiscountAmount
-      );
-
+      const discountedSubtotal = Math.max(0, subtotal - estimatedDiscountAmount);
       const platformFeeCents = Math.round(discountedSubtotal * 0.2);
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -242,6 +240,8 @@ export async function GET(req: Request) {
           userId,
           vendorIds: vendorIds.join(","),
           promoCode: promo?.code || "",
+          promoId: promo?.id || "",
+          promoVendorId: promo?.vendorId || "",
           discountAmount: String(estimatedDiscountAmount),
           platformFeeCents: String(platformFeeCents),
         },
@@ -275,6 +275,8 @@ export async function GET(req: Request) {
             userId,
             vendorId: singleVendor.id,
             promoCode: promo?.code || "",
+            promoId: promo?.id || "",
+            promoVendorId: promo?.vendorId || "",
             discountAmount: String(estimatedDiscountAmount),
             platformFeeCents: String(platformFeeCents),
           },
