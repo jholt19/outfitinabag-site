@@ -121,6 +121,18 @@ export default async function VendorDashboardPage() {
     Object.entries(bundleSales).sort((a, b) => b[1] - a[1])[0]?.[0] ||
     "No sales yet";
 
+  const totalUnitsSold = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const totalOrders = items.length;
+
+  const thisMonth = new Date();
+  thisMonth.setDate(1);
+  thisMonth.setHours(0, 0, 0, 0);
+
+  const monthlyRevenue = items
+    .filter((item) => item.createdAt >= thisMonth)
+    .reduce((sum, item) => sum + (item.vendorPayoutCents || 0), 0);
+
   return (
     <main className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
       <section className="rounded-[32px] border border-black/10 bg-[#f7f5f2] p-6 sm:p-8">
@@ -250,6 +262,38 @@ export default async function VendorDashboardPage() {
           </div>
           <div className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-black">
             {fmtCents(averageOrderValue)}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="rounded-[24px] border border-black/10 bg-white p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Monthly Revenue
+          </div>
+
+          <div className="mt-2 text-3xl font-semibold text-black">
+            {fmtCents(monthlyRevenue)}
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-black/10 bg-white p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Orders
+          </div>
+
+          <div className="mt-2 text-3xl font-semibold text-black">
+            {totalOrders}
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-black/10 bg-white p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Units Sold
+          </div>
+
+          <div className="mt-2 text-3xl font-semibold text-black">
+            {totalUnitsSold}
           </div>
         </div>
       </section>
