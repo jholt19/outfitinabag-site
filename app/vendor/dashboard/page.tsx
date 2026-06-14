@@ -135,8 +135,8 @@ export default async function VendorDashboardPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
-              Manage bundles, inventory, promo codes, payouts, sales, and your
-              storefront.
+              Manage bundles, inventory, promo codes, referrals, payouts,
+              sales, and your storefront.
             </p>
           </div>
 
@@ -160,6 +160,13 @@ export default async function VendorDashboardPage() {
               className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
             >
               Promo Codes
+            </Link>
+
+            <Link
+              href="/vendor/referrals"
+              className="rounded-full border border-black/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+            >
+              Referrals
             </Link>
 
             <Link

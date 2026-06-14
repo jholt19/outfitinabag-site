@@ -47,8 +47,8 @@ model Order {
   status          String?
   createdAt       DateTime @default(now())
 
-  promoCode       String?
-  discountCents   Int      @default(0)
+  promoCode     String?
+  discountCents Int     @default(0)
 
   refundId     String?
   refundStatus String?
@@ -59,11 +59,11 @@ model Order {
 
   payoutStatus String @default("PENDING")
 
-  gmvCents         Int @default(0)
-  platformFeeCents Int @default(0)
-  vendorTotalCents Int @default(0)
-  stripeFeeCents   Int @default(0)
-  netRevenueCents  Int @default(0)
+  gmvCents          Int @default(0)
+  platformFeeCents  Int @default(0)
+  vendorTotalCents  Int @default(0)
+  stripeFeeCents    Int @default(0)
+  netRevenueCents   Int @default(0)
 
   items OrderItem[]
 }
@@ -143,11 +143,31 @@ model Vendor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bundles    Bundle[]
-  outfits    VendorOutfit[]
-  orderItems OrderItem[]
-  reviews    VendorReview[]
-  promoCodes PromoCode[]
+  bundles           Bundle[]
+  outfits           VendorOutfit[]
+  orderItems        OrderItem[]
+  reviews           VendorReview[]
+  promoCodes        PromoCode[]
+  referralsSent     VendorReferral[] @relation("VendorReferralsSent")
+  referralsReceived VendorReferral[] @relation("VendorReferralsReceived")
+}
+
+model VendorReferral {
+  id               String   @id @default(cuid())
+  referrerVendorId String
+  referredVendorId String
+  referralCode     String?
+  status           String   @default("PENDING")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  referrerVendor Vendor @relation("VendorReferralsSent", fields: [referrerVendorId], references: [id], onDelete: Cascade)
+  referredVendor Vendor @relation("VendorReferralsReceived", fields: [referredVendorId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerVendorId, referredVendorId])
+  @@index([referrerVendorId])
+  @@index([referredVendorId])
+  @@index([status])
 }
 
 model VendorReview {
